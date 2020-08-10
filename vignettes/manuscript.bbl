@@ -1,0 +1,187 @@
+\begin{thebibliography}{28}
+\newcommand{\enquote}[1]{``#1''}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\providecommand{\urlprefix}{URL }
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi:\discretionary{}{}{}#1}\else
+  \providecommand{\doi}{doi:\discretionary{}{}{}\begingroup
+  \urlstyle{rm}\Url}\fi
+\providecommand{\eprint}[2][]{\url{#2}}
+
+\bibitem[{Amorim \emph{et~al.}(2018)Amorim, Domingues, Abreu, and
+  Santos}]{amorim2018interpreting}
+Amorim JP, Domingues I, Abreu PH, Santos JA (2018).
+\newblock \enquote{Interpreting deep learning models for ordinal problems.}
+\newblock In \emph{ESANN}.
+
+\bibitem[{Br{\"o}cker and Smith(2007)}]{brocker2007scoring}
+Br{\"o}cker J, Smith LA (2007).
+\newblock \enquote{Scoring probabilistic forecasts: The importance of being
+  proper.}
+\newblock \emph{Weather and Forecasting}, \textbf{22}(2), 382--388.
+
+\bibitem[{Cao \emph{et~al.}(2019)Cao, Mirjalili, and Raschka}]{cao2019rank}
+Cao W, Mirjalili V, Raschka S (2019).
+\newblock \enquote{Rank-consistent ordinal regression for neural networks.}
+\newblock \emph{arXiv preprint arXiv:1901.07884}.
+
+\bibitem[{Cheng \emph{et~al.}(2008)Cheng, Wang, and
+  Pollastri}]{cheng2008neural}
+Cheng J, Wang Z, Pollastri G (2008).
+\newblock \enquote{A neural network approach to ordinal regression.}
+\newblock In \emph{2008 IEEE International Joint Conference on Neural Networks
+  (IEEE World Congress on Computational Intelligence)}, pp. 1279--1284. IEEE.
+
+\bibitem[{Cohen(1960)}]{cohen1960coefficient}
+Cohen J (1960).
+\newblock \enquote{A coefficient of agreement for nominal scales.}
+\newblock \emph{Educational and psychological measurement}, \textbf{20}(1),
+  37--46.
+
+\bibitem[{Cohen(1968)}]{cohen1968weighted}
+Cohen J (1968).
+\newblock \enquote{Weighted kappa: nominal scale agreement provision for scaled
+  disagreement or partial credit.}
+\newblock \emph{Psychological bulletin}, \textbf{70}(4), 213.
+
+\bibitem[{Cortez \emph{et~al.}(2009)Cortez, Cerdeira, Almeida, Matos, and
+  Reis}]{cortez2009modeling}
+Cortez P, Cerdeira A, Almeida F, Matos T, Reis J (2009).
+\newblock \enquote{Modeling wine preferences by data mining from
+  physicochemical properties.}
+\newblock \emph{Decision Support Systems}, \textbf{47}(4), 547--553.
+
+\bibitem[{de~La~Torre \emph{et~al.}(2018)de~La~Torre, Puig, and
+  Valls}]{de2018weighted}
+de~La~Torre J, Puig D, Valls A (2018).
+\newblock \enquote{Weighted kappa loss function for multi-class classification
+  of ordinal data in deep learning.}
+\newblock \emph{Pattern Recognition Letters}, \textbf{105}, 144--154.
+
+\bibitem[{de~La~Torre \emph{et~al.}(2019)de~La~Torre, Valls, and
+  Puig}]{de2019deep}
+de~La~Torre J, Valls A, Puig D (2019).
+\newblock \enquote{A deep learning interpretable classifier for diabetic
+  retinopathy disease grading.}
+\newblock \emph{Neurocomputing}.
+
+\bibitem[{Frank and Hall(2001)}]{frank2001simple}
+Frank E, Hall M (2001).
+\newblock \enquote{A simple approach to ordinal classification.}
+\newblock In \emph{European Conference on Machine Learning}, pp. 145--156.
+  Springer.
+
+\bibitem[{Gal and Ghahramani(2015)}]{gal2015dropout}
+Gal Y, Ghahramani Z (2015).
+\newblock \enquote{Dropout as a Bayesian Approximation: Representing Model
+  Uncertainty in Deep Learning.}
+\newblock \eprint{1506.02142}.
+
+\bibitem[{Garg and Manwani(2019)}]{garg2019robust}
+Garg B, Manwani N (2019).
+\newblock \enquote{Robust Deep Ordinal Regression Under Label Noise.}
+\newblock \emph{arXiv preprint arXiv:1912.03488}.
+
+\bibitem[{Genter and Farewell(1985)}]{genter1985goodness}
+Genter FC, Farewell VT (1985).
+\newblock \enquote{Goodness-of-link testing in ordinal regression models.}
+\newblock \emph{Canadian Journal of Statistics}, \textbf{13}(1), 37--44.
+
+\bibitem[{Gneiting and Raftery(2007)}]{gneiting2007strictly}
+Gneiting T, Raftery AE (2007).
+\newblock \enquote{Strictly proper scoring rules, prediction, and estimation.}
+\newblock \emph{Journal of the American statistical Association},
+  \textbf{102}(477), 359--378.
+
+\bibitem[{Goodfellow \emph{et~al.}(2016)Goodfellow, Bengio, and
+  Courville}]{goodfellow2016deep}
+Goodfellow I, Bengio Y, Courville A (2016).
+\newblock \emph{Deep learning}.
+\newblock MIT press.
+
+\bibitem[{Hothorn(2020)}]{pkg:tram}
+Hothorn T (2020).
+\newblock \emph{\pkg{tram}: Transformation Models}.
+\newblock \proglang{R} package version 0.4-0,
+  \urlprefix\url{https://CRAN.R-project.org/package=tram}.
+
+\bibitem[{Hothorn \emph{et~al.}(2014)Hothorn, Kneib, and
+  B{\"u}hlmann}]{hothorn2014conditional}
+Hothorn T, Kneib T, B{\"u}hlmann P (2014).
+\newblock \enquote{Conditional transformation models.}
+\newblock \emph{Journal of the Royal Statistical Society: Series B: Statistical
+  Methodology}, pp. 3--27.
+
+\bibitem[{Hothorn \emph{et~al.}(2018)Hothorn, M{\"o}st, and
+  B{\"u}hlmann}]{hothorn2018most}
+Hothorn T, M{\"o}st L, B{\"u}hlmann P (2018).
+\newblock \enquote{Most likely transformations.}
+\newblock \emph{Scandinavian Journal of Statistics}, \textbf{45}(1), 110--134.
+
+\bibitem[{Liu \emph{et~al.}(2017)Liu, Lu, Feng, and Zhou}]{liu2017ordinal}
+Liu H, Lu J, Feng J, Zhou J (2017).
+\newblock \enquote{Ordinal deep learning for facial age estimation.}
+\newblock \emph{IEEE Transactions on Circuits and Systems for Video
+  Technology}, \textbf{29}(2), 486--501.
+
+\bibitem[{Liu \emph{et~al.}(2019)Liu, Wang, and Kong}]{liu2019probabilistic}
+Liu Y, Wang F, Kong AWK (2019).
+\newblock \enquote{Probabilistic Deep Ordinal Regression Based on Gaussian
+  Processes.}
+\newblock In \emph{Proceedings of the IEEE International Conference on Computer
+  Vision}, pp. 5301--5309.
+
+\bibitem[{McCullagh(1980)}]{mccullagh1980regression}
+McCullagh P (1980).
+\newblock \enquote{Regression models for ordinal data.}
+\newblock \emph{Journal of the Royal Statistical Society: Series B
+  (Methodological)}, \textbf{42}(2), 109--127.
+
+\bibitem[{Niu \emph{et~al.}(2016)Niu, Zhou, Wang, Gao, and
+  Hua}]{niu2016ordinal}
+Niu Z, Zhou M, Wang L, Gao X, Hua G (2016).
+\newblock \enquote{Ordinal regression with multiple output cnn for age
+  estimation.}
+\newblock In \emph{Proceedings of the IEEE conference on computer vision and
+  pattern recognition}, pp. 4920--4928.
+
+\bibitem[{Sick \emph{et~al.}(2020)Sick, Hothorn, and D{\"u}rr}]{sick2020deep}
+Sick B, Hothorn T, D{\"u}rr O (2020).
+\newblock \enquote{Deep transformation models: Tackling complex regression
+  problems with neural network based transformation models.}
+\newblock \emph{arXiv preprint arXiv:2004.00464}.
+
+\bibitem[{Tutz(2011)}]{tutz2011regression}
+Tutz G (2011).
+\newblock \emph{Regression for categorical data}, volume~34.
+\newblock Cambridge University Press.
+
+\bibitem[{Vargas \emph{et~al.}(2019)Vargas, Guti{\'e}rrez, and
+  Herv{\'a}s}]{vargas2019deep}
+Vargas VM, Guti{\'e}rrez PA, Herv{\'a}s C (2019).
+\newblock \enquote{Deep Ordinal Classification Based on the Proportional Odds
+  Model.}
+\newblock In \emph{International Work-Conference on the Interplay Between
+  Natural and Artificial Computation}, pp. 441--451. Springer.
+
+\bibitem[{Vargas \emph{et~al.}(2020)Vargas, Guti{\'e}rrez, and
+  Herv{\'a}s-Mart{\'\i}nez}]{vargas2020cumulative}
+Vargas VM, Guti{\'e}rrez PA, Herv{\'a}s-Mart{\'\i}nez C (2020).
+\newblock \enquote{Cumulative link models for deep ordinal classification.}
+\newblock \emph{Neurocomputing}.
+
+\bibitem[{Zhu \emph{et~al.}(2020)Zhu, Zhang, Li, Zhang, and
+  Shan}]{zhu2020ordinal}
+Zhu H, Zhang Y, Li G, Zhang J, Shan H (2020).
+\newblock \enquote{Ordinal distribution regression for gait-based age
+  estimation.}
+\newblock \emph{Science China Information Sciences}, \textbf{63}(2), 120102.
+
+\bibitem[{Zhu \emph{et~al.}(2018)Zhu, Zhou, Zhang, and Wang}]{zhu2018facial}
+Zhu H, Zhou Q, Zhang J, Wang JZ (2018).
+\newblock \enquote{Facial aging and rejuvenation by conditional
+  multi-adversarial autoencoder with ordinal regression.}
+\newblock \emph{arXiv preprint arXiv:1804.02740}.
+
+\end{thebibliography}

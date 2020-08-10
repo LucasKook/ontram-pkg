@@ -1,0 +1,20 @@
+Package: ontram
+Type: Package
+Title: Ordinal transformation model neural networks
+Version: 0.1.0
+Authors@R: c(person("Lucas Heinrich", "Kook", role = c("aut", "cre"),
+    email = "lucasheinrich.kook@uzh.ch"))
+Description: Package ontram implements ordinal transformation models using
+    neural networks. Models are fit using stochastic gradient descent to
+    maximize the log-likelihood under any form of uninformative censoring
+    and truncation. Transformation models are described here (...) and 
+    ordinal transformation neural networks are described in the accompanying
+    package vignette.
+License: GPL-2
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 7.1.0
+Suggests: 
+    testthat
+Depends:
+    keras, tensorflow

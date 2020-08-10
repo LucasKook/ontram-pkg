@@ -1,0 +1,395 @@
+\documentclass[article,nojss,shortnames]{jss}
+
+%% packages
+\usepackage{thumbpdf}
+\usepackage{amsfonts,amstext,amsmath,amssymb,amsthm}
+\usepackage{accents}
+\usepackage{color}
+\usepackage{rotating}
+\usepackage{verbatim}
+\usepackage[utf8]{inputenc}
+\usepackage{booktabs}
+\usepackage{tikz}
+%% need no \usepackage{Sweave.sty}
+%%\usepackage[nolists]{endfloat}
+
+\newcommand{\cmd}[1]{\texttt{#1()}}
+
+<<anchor-setup, echo = FALSE, results = "hide", message = FALSE>>=
+set.seed(2410)
+
+knitr::opts_chunk$set(echo = TRUE, results = 'markup', error = FALSE,
+                      warning = FALSE, message = FALSE,
+                      tidy = FALSE, cache = TRUE, size = "small",
+                      fig.width = 6, fig.height = 4, fig.align = "center",
+                      out.width = NULL,
+                      out.height = NULL,
+                      fig.scap = NA)
+knitr::render_sweave()  # use Sweave environments
+knitr::set_header(highlight = '')  # do not \usepackage{Sweave}
+## R settings
+options(prompt = "R> ", continue = "+  ", useFancyQuotes = FALSE)  # JSS style
+options(width = 75)
+
+library(colorspace)
+col2 <- diverge_hcl(2, h = c(246, 40), c = 96, l = c(65, 90))
+fill2 <- diverge_hcl(2, h = c(246, 40), c = 96, l = c(65, 90), alpha = .3)
+@
+
+\newcommand{\TODO}[1]{{\color{red} #1}}
+
+% File with math commands etc.
+\input{defs.tex}
+\input{tikz-stuff}
+
+\renewcommand{\thefootnote}{}
+
+%% code commands
+\newcommand{\Rclass}[1]{`\code{#1}'}
+%% JSS
+\author{Lucas Kook*, Lisa Herzog*, Torsten Hothorn, Oliver D\"urr, Beate Sick}
+\Plainauthor{}
+
+\title{Ordinal neural transformation models}
+\Plaintitle{Ordinal neural transformation models}
+\Shorttitle{\pkg{ontram}}
+
+\Abstract{Model formulations and log-likelihood contributions for the models
+used in \pkg{ontram}. Draft for introduction and methods section. Literature review.}
+
+\Keywords{Notation, literature}
+\Plainkeywords{Notation, literature}
+
+\Address{}
+
+\begin{document}
+
+<<citation, echo = FALSE>>=
+year <- substr(packageDescription("ontram")$Date, 1, 4)
+version <- packageDescription("ontram")$Version
+@
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Notation and general setup}
+%-------------------------------------------------------------------------------
+
+Random variables in upper case, observations thereof in lower case, e.g.,
+r.v. $\rY$, obs. $\ry$
+
+Ordinal response $\rY \in \{\ry_1 < \ry_2 < \dots < \ry_K\}, \; K \geq 2$
+
+Clinical/tabular predictors/covariates $\rx \in \RR^p$
+
+Images $\B \in \RR^{h \times w \times c}$
+
+Observations $i, \; i = 1, \dots, n$
+
+We observe $\yvec \in \RR^n, \rX \in \RR^{n \times p}, \bB \in \RR^{n \times h \times w \times c}$
+
+The dummy (one-hot) encoding of $\yvec$ is $\mY = (\evec_{k,1}^\top, \dots, \evec_{k,n}^\top)^\top$
+where $\evec_{k,i}$ denotes the unit vector with a 1 in the $k$th position for observation
+$y_i = y_k$. $\tilde\yvec = \evec_k$ denotes a single dummy coded observation $\ry = \ry_k$.
+
+Parameters for baseline transformation $\parm$
+
+Parameters for clinical covariates $\shiftparm$
+
+Functional effect for clinical covariates $\beta(\cdot)$
+
+Functional effect for image $\eta(\cdot)$
+
+Transformation function for response-varying effects of image $\parm(\B)$
+
+Likelihood for a given observation $\calL(\cdot ; \ry, \rx, \B)$
+
+Log-likelihood for a given observation $\ell(\cdot ; \ry, \rx, \B)$
+
+Conditional cumulative distribution function $\pY(\ry \given \rx, \B)$
+
+Error/target distribution or inverse link $F$ like $\expit$ or $\pMEV$
+
+Link function $F^{-1}$ like $\logit$ or $\cloglog$
+
+Probability measure $\prob$
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Model formulations}
+%-------------------------------------------------------------------------------
+
+We formulate the models as conditional transformation models as introduced in
+\citet{hothorn2014conditional}. The concept of the most likely transformation
+is described in \citet{hothorn2018most}. In particular, cumulative-type
+ordinal regression models such as proportional odds logistic regression (POLR),
+e.g., as described in \citet{tutz2011regression}, are equivalent to ordinal
+transformation models for a certain choice of $F$ and $\h$.
+
+Proportional odds logistic regression with shift effects
+\begin{align*}
+  \prob(\rY \leq \ry_k \given \rx) = \pY(\ry_k \given \rx)
+  = F\left(\eparm_k - \linpred\right)
+\end{align*}
+% Proportional odds logistic regression complex effects
+% \begin{align*}
+%   \prob(\rY \leq \ry_k \given \rx) = \pY(\ry_k \given \rx)
+%   = F\left(\eparm_k - \beta(\rx)\right)
+% \end{align*}
+Proportional odds logistic regression with shift effects and a complex image effect
+\begin{align*}
+  \prob(\rY \leq \ry_k \given \rx, \B) = \pY(\ry_k \given \rx, \B)
+  = F\left(\eparm_k - \linpred - \eta(\B)\right)
+\end{align*}
+Proportional odds logistic regression with response-varying image effects and
+shift effects for the tabular data
+\begin{align*}
+  \prob(\rY \leq \ry_k \given \rx, \B) = \pY(\ry_k \given \rx, \B)
+  = F\left(\eparm_k(\B) - \linpred\right)
+\end{align*}
+% Proportional odds logistic regression with response-varying image effects and
+% complex effect for the tabular data
+% \begin{align*}
+%   \prob(\rY \leq \ry_k \given \rx, \B) = \pY(\ry_k \given \rx, \B)
+%   = F\left(\eparm_k(\B) - \beta(\rx)\right)
+% \end{align*}
+
+We also fit non-parametric softmax with images only and images together with
+tabular data, i.e.,
+\begin{align*}
+  \prob(\rY = \ry_k \given \B) = \softmax[\eta(\B)_k],
+\end{align*}
+\begin{align*}
+  \prob(\rY = \ry_k \given \rx, \B) = \softmax[\eta(\rx, \B)_k].
+\end{align*}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Likelihood}
+%-------------------------------------------------------------------------------
+
+For the likelihood it is easiest to work with a single observation $\ry = \ry_k$.
+Since we talk about an arbitrary observation we omit the subscript $i$.
+For $\iid$ observations the total likelihood is given by the product over all
+likelihood contributions.
+\begin{align*}
+  \calL(\parm, \shiftparm, \eta ; \ry_k, \rx, \B)
+  &= \prob(\rY = \ry_k \given \rx, \B) \\
+  &= \prob(\rY \leq \ry_k \given \rx, \B) - \prob(\rY \leq \ry_{k-1} \given \rx, \B) \\
+  &= F\left(\eparm_k - \linpred - \eta(\B)\right) -
+    F\left(\eparm_{k-1} - \linpred - \eta(\B)\right)
+\end{align*}
+For the log-likelihood we have
+\begin{align*}
+  \ell(\parm, \shiftparm, \eta ; \ry_k, \rx, \B)
+  &= \log\prob(\rY = \ry_k \given \rx, \B) \\
+  &= \log\left(\prob(\rY \leq \ry_k \given \rx, \B) - \prob(\rY \leq \ry_{k-1} \given \rx, \B)\right) \\
+  &= \log\left(F\left(\eparm_k - \linpred - \eta(\B)\right) -
+    F\left(\eparm_{k-1} - \linpred - \eta(\B)\right)\right).
+\end{align*}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Interpretability}
+%-------------------------------------------------------------------------------
+
+Classical regression textbooks, like \citet{tutz2011regression}, discuss
+$F \in \{\expit, \pMEV, \pGumbel, \pN\}$ which are called cumulative logit,
+minimum extreme value, maximum extreme value and probit models, respectively.
+\citet{tutz2011regression} also derives the interpretational scales and stresses,
+that the coefficients resulting from a cumulative probit model are hard to interpret.
+
+For $F = \expit$ we have
+\begin{align*}
+	\prob(\rY \leq \ry_k \given \rx) &= \expit(\eparm_k - \linpred) \\
+	\logit(\prob(\rY \leq \ry_k \given \rx)) &= \eparm_k - \linpred \equiv \omega(\ry_k \given \rx) \\
+\end{align*}
+Now $\linpred = \omega(\ry_k \given \rx) - \omega(\ry_k \given \rx = 0)$, or on the
+odds-scale
+\begin{align*}
+	\frac{\pY(\ry_k \given \rx)}{1 - \pY(\ry_k \given \rx)} =
+		\frac{\pY(\ry_k \given \rx = 0)}{1 - \pY(\ry_k \given \rx = 0)}
+		\exp(-\linpred)
+\end{align*}
+which shows that $\shiftparm$ are interpretable as log odds-ratios. In the same way,
+$\eta(\B)$ can be interpreted as a log odds-ratio.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Literature}
+%-------------------------------------------------------------------------------
+
+\subsection{Highly relevant}
+
+\citet{vargas2020cumulative} give a nice overview of cumulative link models and
+what has been done in the past to fit ordinal neural network regression models.
+\begin{itemize}
+  \item ``Simply using an ordinal evaluation metric'', e.g., \citet{rohrbach2019bone}
+  \item Ordinal problem as multiple binary sub-problems
+    (first proposed by \citet{frank2001simple}, then used for age estimation
+    in \citet{niu2016ordinal})
+  \item Ordinal loss function (\citet{de2018weighted}, \citet{de2019deep} use
+    qwk loss. Earliest approach w/o qwk would be \citet{cheng2008neural}, who
+    used a different dummy encoding to take into account ordinal nature of response.)
+  \item Enforce unimodality of pmf, as done in \citet{beckham2017unimodal}.
+  \citet{beckham2016simple} also derive a MSE that takes ordering into account.
+\end{itemize}
+
+\citet{de2018weighted}: Weighted $\kappa$ loss function, which we have also
+implemented. Look here for formulae. They present three case studies on search
+result relevance, life insurance assessment and diabetic retinopathy.
+They report a $\kappa_{\text{test}} = 0.740$ for qwk loss, compared to
+$\kappa_{\text{test}} = 0.686$ for logLik loss (p. 152).
+
+\citet{liu2019probabilistic} use Gaussian process based ordinal regression.
+It's a Bayesian approach and they use a Gaussian likelihood with Gaussian
+priors. They notice, however, that they can use any cdf to formulate their
+likelihood, given by $p(y = y_k \given f, \sigma) = \Phi[(b_k - f) / \sigma] - \Phi[(b_{k-1} - f) / \sigma]$.
+It's (almost) the same likelihood that we are using, where $b_k$ denotes the intercept
+for class $k$ and there are $K-2$ linear constraints to ensure that the resulting
+cdf is valid. However, instead of parameterizing the intercept function as
+$\theta_k = \theta_1 + \sum_{i=2}^k \exp(\gamma_i)$, they use $b_k = b_1 + \sum_{i=2}^k \delta_i^2$
+for $i = 2, \dots, K-1$.
+
+\citet{vargas2019deep} use POLR model formulation, with same approach for their
+intercept function as in \citet{liu2019probabilistic}
+(in that they use $b_k = b_1 + \sum_{i=2}^k \delta_i^2$),
+but with a quadratic weighted $\kappa$ loss. The same goes for \citet{vargas2020cumulative}.
+
+\citet{frank2001simple} splits the ordinal regression problem with $K$ classes
+in $K-1$ binary subtasks. This and the different one-hot coding approach
+from \citet{cheng2008neural} both have roots in earlier developments by
+\citet{mccullagh1980regression} and \citet{genter1985goodness}.
+
+\subsection{Methods}
+
+\citet{garg2019robust} address ``label noise'' (maybe we can draw the connection
+to censoring from there). They describe three loss functions. (A) Mean absolute
+error between true and predicted label, (B) implicit constrained (IMC) loss, which
+ensures the $K-2$ linear inequality constraints on the ``intercept function'',
+(C) cross entropy loss using a sigmoid activation in the last layer (same approach
+as in \citet{cheng2008neural} using the different dummy encoding scheme).
+
+\citet{liu2017deep} ordinal loss for class boundaries with a hyperparameter to
+specify the margin/radius of other classes to consider to compute the loss. They
+focus on small datasets and use data augmentation.
+
+\citet{amorim2018interpreting} comment on interpretability of ordinal neural
+networks, mainly in the spirit of \citet{frank2001simple}.
+
+\citet{cao2019rank} (rank consisten logits for ordinal regression) address the
+limitations of the $K-1$ binary problems approach. Use cross-entropy loss as
+suggested in \citet{cheng2008neural}.
+
+\citet{diaz2019soft} soft labels for ordinal regression. Use a modified soft-max/
+cross entropy loss.
+
+\citet{liu2018constrained} use linear inequality constraints to address ordinality.
+
+\citet{vanderheyden2018ordinal} use a completely different type of loss function
+called ``ordinal hyperplane loss'', akin to ordinal support vector machines.
+The latter were advocated by \citet{chu2005new}, \citet{chu2007support}.
+
+\subsection{Application}
+
+\citet{niu2016ordinal} split the ordinal problem into multiple binary sub-problems,
+as suggested by \citet{frank2001simple}.
+They work on the AFAD dataset, where age ranges from 15-40.
+
+\citet{zhu2018facial} address age estimation with adversarial training and an
+ordinal regression loss in the spirit of \citet{niu2016ordinal}.
+
+\citet{fu2018deep} pixel-wise ordinal loss for monocular depth estimation.
+Maybe worthwhile to look at in detail.
+
+\citet{liu2017ordinal} ordinal age estimation from faces.
+MSE loss and cross-entropy loss.
+
+\citet{wu2019ordinal} apply ordinal regression to detect sleepiness from speech
+using a triplett loss (hyperparameter encoding the maximum distance between
+two pairs of three distinct classes, i.e.,
+$\rvert y_a - y_b \rvert > \rvert y_a - y_c \rvert + \alpha$).
+
+\citet{zhu2020ordinal} apply ordinal regression to gait-based age estimation
+using the approach described in \citet{cheng2008neural} with a CE loss.
+
+\subsection{Miscellaneous}
+
+\citet{tutz2011regression}: Book on regression for categorical outcomes.
+Describes ``cumulative link models'' in detail. Also contains information about
+interpretability and the connection to the different link functions.
+
+\citet{mccullagh1980regression} was one of the key papers that drove the
+development of ordinal regression models.
+
+\citet{genter1985goodness} generalized the cumulative link models and already
+considered probit, cloglog and other link functions. More or less explicitly, both
+\citet{genter1985goodness} and \citet{mccullagh1980regression} used cumulative
+approaches.
+
+\citet{cohen1960coefficient} and \citet{cohen1968weighted}: Original papers on
+Cohen's $\kappa$ and weighted $\kappa$, respectively.
+
+For basic deep learning related references cite \citet{goodfellow2016deep}.
+
+First paper on deep transformation models for continuous response \citet{sick2020deep}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Comment on the wine experiment in Sick et al. (2020)}
+%-------------------------------------------------------------------------------
+
+\citet{sick2020deep} use the exact continuous likelihood for the \code{UCIwine}
+data and report an overarchingly high performance ($\CE_{\CV} = 0.67 \pm 0.028$)
+compared to other models (NGBoost, MC Dropout, Deep Ensembles, GPs, MDN, NFN,
+all around $\CE_{\CV} = 0.93$). The exact continuous likelihood is
+not bounded, i.e., $\ell(\parm;\ry, \rx) \in (-\infty, +\infty)$. However, the
+correct, discrete likelihood is bounded by $(-\infty,0]$, because the largest
+likelihood contribution can only be as large as 0 ($\log 1 = 0$).
+Thus, it is much harder to arrive at a similar performance when using the
+discrete likelihood.
+
+The exact continuous likelihood is the wrong one to use, because scaling an
+ordinal response and treating it as continuous assumes
+the differences between classes live on a continuous scale.
+However, taking differences on an ordinal scale is not valid in general.
+The exact continuous likelihood fosters overconfident predictions
+leading to likelihood contributions far greater than 1, as visible from Figure 4
+in \citet{sick2020deep}.
+
+\clearpage
+
+\bibliography{bibliography,packages}
+
+<<bib-funs, echo = FALSE, results='hide', purl = FALSE, cache = FALSE, eval=TRUE>>=
+if (file.exists("packages.bib")) file.remove("packages.bib")
+pkgversion <- function(pkg) {
+  pkgbib(pkg)
+  packageDescription(pkg)$Version
+}
+pkgbib <- function(pkg) {
+  x <- citation(package = pkg, auto = TRUE)[[1]]
+  b <- toBibtex(x)
+  b <- gsub("Buehlmann", "B{\\\\\"u}hlmann", b)
+  b <- gsub("R package", "\\\\proglang{R} package", b)
+
+  b[1] <- paste("@Manual{pkg:", pkg, ",", sep = "")
+  if (is.na(b["url"])) {
+    b[length(b)] <- paste("   URL = {http://CRAN.R-project.org/package=",
+                          pkg, "}", sep = "")
+    b <- c(b, "}")
+  }
+  cat(b, sep = "\n", file = "packages.bib", append = TRUE)
+}
+pkg <- function(pkg)
+  paste("\\\\pkg{", pkg, "} \\\\citep[version~",
+        pkgversion(pkg), ",][]{pkg:", pkg, "}", sep = "")
+
+pkgs <- c("mlt", "tram", "ordinal")
+out <- sapply(pkgs, pkg)
+
+x <- readLines("packages.bib")
+for (p in pkgs)
+  x <- gsub(paste("\\{", p, ":", sep = ""), paste("\\{\\\\pkg{", p, "}:", sep = ""), x)
+cat(x, sep = "\n", file = "packages.bib", append = FALSE)
+@
+
+<<anchor-sessionInfo, echo=FALSE, results="hide">>=
+sessionInfo()
+@
+
+\end{document}

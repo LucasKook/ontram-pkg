@@ -1,0 +1,15 @@
+\usepackage{tikz}
+
+\usetikzlibrary{positioning, calc, shapes.geometric, shapes.multipart,
+  shapes, arrows.meta, arrows, quotes,
+  decorations.markings, external, trees}
+\tikzstyle{line} = [draw, -latex']
+\tikzstyle{Arrow} = [
+        thick,
+        decoration={
+                markings,
+                mark=at position 1 with {
+                        \arrow[thick]{latex}
+} },
+        shorten >= 3pt, preaction = {decorate}
+        ]
