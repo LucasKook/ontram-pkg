@@ -29,7 +29,7 @@ ce <- -as.numeric(logLik(blm))/nrow(wine)
 
 # ontram model ------------------------------------------------------------
 
-n_epochs <- 1000
+n_epochs <- 200
 mbl <- keras_model_sequential() %>%
   layer_dense(units = 4, input_shape = 1L, use_bias = TRUE, activation = "tanh") %>%
   layer_dense(units = 4, use_bias = TRUE)
@@ -67,7 +67,7 @@ im_train2 <- im_train[-idx, , drop = FALSE]
 mo2 <- ontram(mod_bl = mbl, mod_sh = msh, method = "logit", n_batches = 10,
              epochs = n_epochs/4, x_dim = 1L, y_dim = ncol(y_train),
              response_varying = TRUE)
-mo2hist <- fit_ontram(mo, x_train = x_train2, y_train = y_train2, img_train = im_train2,
-                      history = TRUE, x_test = x_valid, y_test = y_valid, img_test = im_valid)
+mo2hist <- fit_ontram2(mo, x_train = x_train2, y_train = y_train2, img_train = im_train2,
+                       history = TRUE, x_test = x_valid, y_test = y_valid, img_test = im_valid)
 plot(mo2hist)
 
