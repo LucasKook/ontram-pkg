@@ -63,6 +63,6 @@ y_train2 <- y_train[-idx, , drop = FALSE]
 mo2 <- ontram(mod_bl = mbl, mod_sh = NULL, method = "logit", n_batches = 300,
               epochs = 5, x_dim = c(28, 28), y_dim = ncol(y_train),
               response_varying = TRUE)
-mo2hist <- fit_ontram(mo2, x_train = NULL, y_train = y_train2, img_train = x_train2,
-                      history = TRUE, x_test = NULL, y_test = y_valid, img_test = x_valid)
+mo2hist <- fit_ontram2(mo2, x_train = NULL, y_train = y_train2, img_train = x_train2,
+                       history = TRUE, x_test = NULL, y_test = y_valid, img_test = x_valid)
 plot(mo2hist)
