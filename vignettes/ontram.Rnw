@@ -1,0 +1,118 @@
+%\VignetteEngine{knitr::knitr}
+%\VignetteIndexEntry{ontram}
+%\VignetteDepends{ontram, colorspace, kableExtra, keras, tensorflow}
+
+\documentclass[article,nojss,shortnames]{jss}
+
+%% packages
+\usepackage{thumbpdf}
+\usepackage{amsfonts,amstext,amsmath,amssymb,amsthm}
+\usepackage{accents}
+\usepackage{color}
+\usepackage{rotating}
+\usepackage{verbatim}
+\usepackage[utf8]{inputenc}
+\usepackage{booktabs}
+\usepackage{tikz}
+\usepackage{multirow}
+%% need no \usepackage{Sweave.sty}
+%%\usepackage[nolists]{endfloat}
+
+\newcommand{\cmd}[1]{\texttt{#1()}}
+
+<<anchor-setup, echo = FALSE, results = "hide", message = FALSE>>=
+set.seed(2410)
+
+knitr::opts_chunk$set(echo = TRUE, results = 'markup', error = FALSE,
+                      warning = FALSE, message = FALSE,
+                      tidy = FALSE, cache = TRUE, size = "small",
+                      fig.width = 6, fig.height = 4, fig.align = "center",
+                      out.width = NULL,
+                      out.height = NULL,
+                      fig.scap = NA)
+knitr::render_sweave()  # use Sweave environments
+knitr::set_header(highlight = '')  # do not \usepackage{Sweave}
+## R settings
+options(prompt = "R> ", continue = "+  ", useFancyQuotes = FALSE)  # JSS style
+options(width = 75)
+
+library(colorspace)
+col2 <- diverge_hcl(2, h = c(246, 40), c = 96, l = c(65, 90))
+fill2 <- diverge_hcl(2, h = c(246, 40), c = 96, l = c(65, 90), alpha = .3)
+@
+
+\newcommand{\TODO}[1]{{\color{red} #1}}
+
+% File with math commands etc.
+\input{defs.tex}
+\input{tikz-stuff}
+
+\renewcommand{\thefootnote}{}
+
+%% code commands
+\newcommand{\Rclass}[1]{`\code{#1}'}
+%% JSS
+\author{Lucas Kook}
+\Plainauthor{Lucas Kook}
+
+\title{Ordinal neural network transformation models: The \pkg{ontram} package}
+\Plaintitle{Ordinal neural network transformation models: The ontram package}
+\Shorttitle{\pkg{ontram}}
+
+\Abstract{}
+
+\Keywords{}
+\Plainkeywords{}
+
+\Address{}
+
+\begin{document}
+
+<<citation, echo = FALSE>>=
+year <- substr(packageDescription("ontram")$Date, 1, 4)
+version <- packageDescription("ontram")$Version
+@
+
+
+\clearpage
+
+\bibliography{bibliography,packages}
+
+<<bib-funs, echo = FALSE, results='hide', purl = FALSE, cache = FALSE, eval=TRUE>>=
+if (file.exists("packages.bib")) file.remove("packages.bib")
+pkgversion <- function(pkg) {
+  pkgbib(pkg)
+  packageDescription(pkg)$Version
+}
+pkgbib <- function(pkg) {
+  x <- citation(package = pkg, auto = TRUE)[[1]]
+  b <- toBibtex(x)
+  b <- gsub("Buehlmann", "B{\\\\\"u}hlmann", b)
+  b <- gsub("R package", "\\\\proglang{R} package", b)
+
+  b[1] <- paste("@Manual{pkg:", pkg, ",", sep = "")
+  if (is.na(b["url"])) {
+    b[length(b)] <- paste("   URL = {http://CRAN.R-project.org/package=",
+                          pkg, "}", sep = "")
+    b <- c(b, "}")
+  }
+  cat(b, sep = "\n", file = "packages.bib", append = TRUE)
+}
+pkg <- function(pkg)
+  paste("\\\\pkg{", pkg, "} \\\\citep[version~",
+        pkgversion(pkg), ",][]{pkg:", pkg, "}", sep = "")
+
+pkgs <- c("mlt", "tram", "ordinal")
+out <- sapply(pkgs, pkg)
+
+x <- readLines("packages.bib")
+for (p in pkgs)
+  x <- gsub(paste("\\{", p, ":", sep = ""), paste("\\{\\\\pkg{", p, "}:", sep = ""), x)
+cat(x, sep = "\n", file = "packages.bib", append = FALSE)
+@
+
+<<anchor-sessionInfo, echo=FALSE, results="hide">>=
+sessionInfo()
+@
+
+\end{document}
