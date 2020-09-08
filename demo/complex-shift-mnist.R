@@ -58,7 +58,7 @@ preds_test <- predict(mo, NULL, y_test, x_test)
 # Interpretability --------------------------------------------------------
 
 # Baseline trafo coef
-cfb <- get_weights(mo$mod_baseline)[[1]] %>% diag %>% ontram:::.to_theta()
+cfb <- get_weights(mo$mod_baseline)[[1]] %>% ontram:::.to_theta()
 
 # Train
 dat_train <- data.frame(class = ordered(mnist$train$y[1:nim]),
