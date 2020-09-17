@@ -166,3 +166,70 @@ fit_ontram2 <- function(model, history = FALSE, x_train = NULL,
     return(model_history)
   return(invisible(model))
 }
+
+#' Function for estimating the model
+#' @examples
+#' data("wine", package = "ordinal")
+#' fml <- rating ~ temp + contact
+#' x_train <- model.matrix(fml, data = wine)[, -1L]
+#' y_train <- model.matrix(~ 0 + rating, data = wine)
+#' x_valid <- x_train[1:20,]
+#' y_valid <- y_train[1:20,]
+#' mo <- ontram_polr(x_dim = ncol(x_train), y_dim = ncol(y_train),
+#'     method = "logit", n_batches = 10, epochs = 50)
+#' mo_hist <- fit_ontram2(mo, x_train = x_train, y_train = y_train, history = TRUE,
+#'     x_test = x_valid, y_test = y_valid)
+#' plot(mo_hist)
+#' @export
+fit_ontram3 <- function(model, history = FALSE, x_train = NULL,
+                        y_train, img_train = NULL, save_model = FALSE,
+                        x_test = NULL, y_test = NULL, img_test = NULL) {
+  stopifnot(nrow(x_train) == nrow(y_train))
+  stopifnot(ncol(y_train) == model$y_dim)
+  apply_gradient_tf <- tf_function(apply_gradient)
+  n <- nrow(y_train)
+  start_time <- Sys.time()
+  message("Training ordinal transformation model neural network.")
+  message(paste0("Training samples: ", nrow(y_train)))
+  message(paste0("Batches: ", bs <- model$n_batches))
+  message(paste0("Batch size: ", ceiling(n/bs)))
+  message(paste0("Epochs: ", epo <- model$epoch))
+  if (history) {
+    model_history <- list(train_loss = c(), test_loss = c())
+    class(model_history) <- "ontram_history"
+  }
+  for (epo in seq_len(epo)) {
+    message(paste0("Training epoch: ", epo))
+    batch_idx <- sample(rep(seq_len(bs), ceiling(n/bs)), n)
+    for (bat in seq_len(bs)) {
+      idx <- which(batch_idx == bat)
+      y_batch <- tf$constant(.batch_subset(y_train, idx, dim(y_train)),
+                             dtype = "float32")
+      if (!is.null(x_train)) {
+        x_batch <- tf$constant(.batch_subset(x_train, idx, dim(x_train)),
+                               dtype = "float32")
+      } else {
+        x_batch <- NULL
+      }
+      if (!is.null(img_train)) {
+        img_batch <- lapply(img_train, function(x) tf$constant(.batch_subset(x, idx, dim(x)),
+                                                             dtype = "float32"))
+      } else {
+        img_batch <- NULL
+      }
+      apply_gradient_tf(x_batch, y_batch, model, img_batch,
+                        response_varying = model$response_varying)
+    }
+    if (history) {
+      train_loss <- predict(model, x = x_train, y = y_train, im = img_train)$negLogLik
+      test_loss <- predict(model, x = x_test, y = y_test, im = img_test)$negLogLik
+      model_history$train_loss <- append(model_history$train_loss, train_loss)
+      model_history$test_loss <- append(model_history$test_loss, test_loss)
+    }
+  }
+  end_time <- Sys.time()
+  message(paste0("Training took ", end_time - start_time))
+  if (history)
+    return(model_history)
+  return(invisible(model))
+}
