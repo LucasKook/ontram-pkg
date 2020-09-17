@@ -32,7 +32,8 @@ predict.ontram <- function(model, x = NULL, y, im = NULL) {
     betas <- tf$zeros_like(thetas)
   }
   if (!is.null(im)) {
-    im <- tf$constant(im, dtype = "float32")
+    if (!is.list(im))
+      im <- tf$constant(im, dtype = "float32")
     etas <- model$mod_image(im)
   } else {
     etas <- tf$zeros_like(thetas)
