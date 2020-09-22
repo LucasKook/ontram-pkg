@@ -183,10 +183,11 @@ fit_ontram2 <- function(model, history = FALSE, x_train = NULL,
 #' @export
 fit_ontram3 <- function(model, history = FALSE, x_train = NULL,
                         y_train, img_train = NULL, save_model = FALSE,
-                        x_test = NULL, y_test = NULL, img_test = NULL) {
+                        x_test = NULL, y_test = NULL, img_test = NULL,
+                        lambda2 = 1e-4, numnet = 1) {
   stopifnot(nrow(x_train) == nrow(y_train))
   stopifnot(ncol(y_train) == model$y_dim)
-  apply_gradient_tf <- tf_function(apply_gradient)
+  apply_gradient_tf <- tf_function(apply_gradient2)
   n <- nrow(y_train)
   start_time <- Sys.time()
   message("Training ordinal transformation model neural network.")
@@ -218,7 +219,8 @@ fit_ontram3 <- function(model, history = FALSE, x_train = NULL,
         img_batch <- NULL
       }
       apply_gradient_tf(x_batch, y_batch, model, img_batch,
-                        response_varying = model$response_varying)
+                        response_varying = model$response_varying,
+                        lambda2 = lambda2, numnet = numnet)
     }
     if (history) {
       train_loss <- predict(model, x = x_train, y = y_train, im = img_train)$negLogLik

@@ -13,7 +13,9 @@ fit_ontram3(
   save_model = FALSE,
   x_test = NULL,
   y_test = NULL,
-  img_test = NULL
+  img_test = NULL,
+  lambda2 = 1e-04,
+  numnet = 1
 )
 }
 \description{
