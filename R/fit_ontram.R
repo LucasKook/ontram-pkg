@@ -116,23 +116,30 @@ fit_ontram <- function(model, history = FALSE, x_train = NULL,
 #' @export
 fit_ontram2 <- function(model, history = FALSE, x_train = NULL,
                        y_train, img_train = NULL, save_model = FALSE,
-                       x_test = NULL, y_test = NULL, img_test = NULL) {
+                       x_test = NULL, y_test = NULL, img_test = NULL, verbose = 1) {
   stopifnot(nrow(x_train) == nrow(y_train))
   stopifnot(ncol(y_train) == model$y_dim)
   apply_gradient_tf <- tf_function(apply_gradient)
   n <- nrow(y_train)
   start_time <- Sys.time()
-  message("Training ordinal transformation model neural network.")
-  message(paste0("Training samples: ", nrow(y_train)))
-  message(paste0("Batches: ", bs <- model$n_batches))
-  message(paste0("Batch size: ", ceiling(n/bs)))
-  message(paste0("Epochs: ", epo <- model$epoch))
+  if (verbose != 0) {
+    message("Training ordinal transformation model neural network.")
+    message(paste0("Training samples: ", nrow(y_train)))
+    message(paste0("Batches: ", bs <- model$n_batches))
+    message(paste0("Batch size: ", ceiling(n/bs)))
+    message(paste0("Epochs: ", nep <- model$epoch))
+    pb <- txtProgressBar(min = 1, max = nep, style = 3)
+  }
   if (history) {
     model_history <- list(train_loss = c(), test_loss = c())
     class(model_history) <- "ontram_history"
   }
-  for (epo in seq_len(epo)) {
-    message(paste0("Training epoch: ", epo))
+  for (epo in seq_len(nep)) {
+    if (verbose == 2) {
+      message(paste0("Training epoch: ", epo))
+    } else if (verbose == 1) {
+      setTxtProgressBar(pb, epo)
+    }
     batch_idx <- sample(rep(seq_len(bs), ceiling(n/bs)), n)
     for (bat in seq_len(bs)) {
       idx <- which(batch_idx == bat)

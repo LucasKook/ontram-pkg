@@ -13,7 +13,8 @@ fit_ontram2(
   save_model = FALSE,
   x_test = NULL,
   y_test = NULL,
-  img_test = NULL
+  img_test = NULL,
+  verbose = 1
 )
 }
 \description{
