@@ -30,7 +30,7 @@ ontram_logLik <- function(y_dim) {
 
     lik <- k_sigmoid(itr - fwd_eta - fwd_beta) -
       k_sigmoid(itl - fwd_eta - fwd_beta)
-    nll <- - k_mean(k_log(lik + 1e-12))
+    nll <- - k_mean(k_log(k_clip(lik, 1e-12, 1 - 1e-12)))
     return(nll)
   }
   return(ret)
