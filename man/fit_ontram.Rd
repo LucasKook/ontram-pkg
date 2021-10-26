@@ -10,11 +10,42 @@ fit_ontram(
   x_train = NULL,
   y_train,
   img_train = NULL,
-  save_model = FALSE,
   x_test = NULL,
   y_test = NULL,
-  img_test = NULL
+  img_test = NULL,
+  early_stopping = FALSE,
+  patience = 1,
+  min_delta = 0,
+  stp_train = TRUE,
+  filepath = NULL
 )
+}
+\arguments{
+\item{model}{an object of class "\link[ontram]{ontram}".}
+
+\item{history}{logical. If TRUE train and test are returned as list.}
+
+\item{x_train}{tabular data used for training the model.}
+
+\item{y_train}{response data (one-hot encoded) used for training the model.}
+
+\item{img_train}{image data used for training the model.}
+
+\item{x_test}{tabular data used for evaluating the model.}
+
+\item{y_test}{response data (one-hot encoded) used for evaluating the model.}
+
+\item{img_test}{image data used for evaluating the model.}
+
+\item{early_stopping}{logical. Whether to use early stopping (requires \code{history = TRUE}).}
+
+\item{patience}{number of epochs with no improvement after which training will be stopped.}
+
+\item{min_delta}{minimum increase in test loss considered no improvement.}
+
+\item{filepath}{path where to save best model.}
+
+\item{stop_train}{logical. Whether to stop training if conditions are fulfilled the first time or whether to continue training.}
 }
 \description{
 Function for estimating the model

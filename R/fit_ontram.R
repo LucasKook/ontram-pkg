@@ -12,19 +12,24 @@
 #'     x_test = x_valid, y_test = y_valid)
 #' plot(mo_hist)
 #' @export
-
-## Additional arguments for early stopping
-# early_stopping : whether to use early stopping or not (requires history = TRUE)
-# patience : the number of evaluations to observe worsening before stopping
-# min_delta : min. increase in loss considered as worsening
-# step_size : number of epochs between evaluations
-# add argument whether train until the end or stop
-
+#' @param model an object of class "\link[ontram]{ontram}".
+#' @param history logical. If TRUE train and test are returned as list.
+#' @param x_train tabular data used for training the model.
+#' @param y_train response data (one-hot encoded) used for training the model.
+#' @param img_train image data used for training the model.
+#' @param x_test tabular data used for evaluating the model.
+#' @param y_test response data (one-hot encoded) used for evaluating the model.
+#' @param img_test image data used for evaluating the model.
+#' @param early_stopping logical. Whether to use early stopping (requires \code{history = TRUE}).
+#' @param patience number of epochs with no improvement after which training will be stopped.
+#' @param min_delta minimum increase in test loss considered no improvement.
+#' @param stop_train logical. Whether to stop training if conditions are fulfilled the first time or whether to continue training.
+#' @param filepath path where to save best model.
 fit_ontram <- function(model, history = FALSE, x_train = NULL,
                        y_train, img_train = NULL,
                        x_test = NULL, y_test = NULL, img_test = NULL,
                        early_stopping = FALSE, patience = 1,
-                       min_delta = 0, step_size = 1, save_best_only = FALSE,
+                       min_delta = 0, stp_train = TRUE,
                        filepath = NULL) {
   stopifnot(nrow(x_train) == nrow(y_train))
   stopifnot(ncol(y_train) == model$y_dim)
@@ -102,15 +107,11 @@ fit_ontram <- function(model, history = FALSE, x_train = NULL,
       model_history$test_loss <- append(model_history$test_loss, test_loss)
 
       if (early_stopping) { #ag: early stopping implementation
-        if (epo %% step_size == 0) {
           if (model_history$test_loss[epo] <= current_min) {
             current_min <- model_history$test_loss[epo]
             n_worse <- 0
-            if (save_best_only) {
-              save_model.ontram(model, filename = paste0(filepath, "best_model"))
-            }
-          }
-          else {
+            save_model.ontram(model, filename = paste0(filepath, "best_model"))
+          } else {
             if (model_history$test_loss[epo] - current_min >= min_delta) {
               n_worse <- n_worse + 1
               if (n_worse == patience) {
@@ -120,7 +121,6 @@ fit_ontram <- function(model, history = FALSE, x_train = NULL,
               }
             }
           }
-        }
       }
     }
     if (early_stop) {
