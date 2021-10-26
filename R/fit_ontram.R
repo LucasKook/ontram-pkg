@@ -12,12 +12,27 @@
 #'     x_test = x_valid, y_test = y_valid)
 #' plot(mo_hist)
 #' @export
+
+## Additional arguments for early stopping
+# early_stopping : whether to use early stopping or not (requires history = TRUE)
+# patience : the number of evaluations to observe worsening before stopping
+# min_delta : min. increase in loss considered as worsening
+# step_size : number of epochs between evaluations
+# add argument whether train until the end or stop
+
 fit_ontram <- function(model, history = FALSE, x_train = NULL,
-                      y_train, img_train = NULL, save_model = FALSE,
-                      x_test = NULL, y_test = NULL, img_test = NULL) {
+                       y_train, img_train = NULL,
+                       x_test = NULL, y_test = NULL, img_test = NULL,
+                       early_stopping = FALSE, patience = 1,
+                       min_delta = 0, step_size = 1, save_best_only = FALSE,
+                       filepath = NULL) {
   stopifnot(nrow(x_train) == nrow(y_train))
   stopifnot(ncol(y_train) == model$y_dim)
+  stopifnot(patiece >= 1)
+  stopifnot(min_delta >= 0)
+  stopifnot(step_size >= 1)
   apply_gradient_tf <- tf_function(apply_gradient)
+
   n <- nrow(y_train)
   start_time <- Sys.time()
   message("Training ordinal transformation model neural network.")
@@ -27,8 +42,15 @@ fit_ontram <- function(model, history = FALSE, x_train = NULL,
   message(paste0("Epochs: ", epo <- model$epoch))
   if (history) {
     model_history <- list(train_loss = c(), test_loss = c())
+    if (save_best_only) {
+      model_history <- c(model_history, list(epoch_stop = c())) #ag: if save_best_only = T, epoch at which model stopped is saved
+    }
     class(model_history) <- "ontram_history"
     hist_idxs <- sample(rep(seq_len(10), ceiling(n/10)), n)
+  }
+  early_stop <- FALSE #ag: early stopping initials
+  if (early_stopping) {
+    current_min <- Inf
   }
   for (epo in seq_len(epo)) {
     message(paste0("Training epoch: ", epo))
@@ -45,7 +67,7 @@ fit_ontram <- function(model, history = FALSE, x_train = NULL,
       }
       if (!is.null(img_train)) {
         img_batch <- tf$constant(.batch_subset(img_train, idx, dim(img_train)),
-                                   dtype = "float32")
+                                 dtype = "float32")
       } else {
         img_batch <- NULL
       }
@@ -57,16 +79,16 @@ fit_ontram <- function(model, history = FALSE, x_train = NULL,
       for (hist_bat in seq_len(10)) {
         hist_idx <- which(hist_idxs == hist_bat)
         y_hist <- tf$constant(.batch_subset(y_train, hist_idx, dim(y_train)),
-                               dtype = "float32")
+                              dtype = "float32")
         if (!is.null(x_train)) {
           x_hist <- tf$constant(.batch_subset(x_train, hist_idx, dim(x_train)),
-                                 dtype = "float32")
+                                dtype = "float32")
         } else {
           x_hist <- NULL
         }
         if (!is.null(img_train)) {
           img_hist <- tf$constant(.batch_subset(img_train, hist_idx, dim(img_train)),
-                                   dtype = "float32")
+                                  dtype = "float32")
         } else {
           img_hist <- NULL
         }
@@ -78,6 +100,34 @@ fit_ontram <- function(model, history = FALSE, x_train = NULL,
       test_loss <- predict(model, x = x_test, y = y_test, im = img_test)$negLogLik
       model_history$train_loss <- append(model_history$train_loss, train_loss)
       model_history$test_loss <- append(model_history$test_loss, test_loss)
+
+      if (early_stopping) { #ag: early stopping implementation
+        if (epo %% step_size == 0) {
+          if (model_history$test_loss[epo] <= current_min) {
+            current_min <- model_history$test_loss[epo]
+            n_worse <- 0
+            if (save_best_only) {
+              save_model.ontram(model, filename = paste0(filepath, "best_model"))
+            }
+          }
+          else {
+            if (model_history$test_loss[epo] - current_min >= min_delta) {
+              n_worse <- n_worse + 1
+              if (n_worse == patience) {
+                message("Early stopping")
+                early_stop <- TRUE
+                model_history$epoch_stop <- epo - patience
+              }
+            }
+          }
+        }
+      }
+    }
+    if (early_stop) {
+      if (save_best_only) {
+        model <- load_model.ontram(model, filename = paste0(filepath, "best_model"))
+      }
+      break
     }
   }
   end_time <- Sys.time()
@@ -86,6 +136,7 @@ fit_ontram <- function(model, history = FALSE, x_train = NULL,
     return(model_history)
   return(invisible(model))
 }
+
 
 # not very elegant, look for different solution
 .batch_subset <- function(obj, idx, dim) {
@@ -99,6 +150,7 @@ fit_ontram <- function(model, history = FALSE, x_train = NULL,
   }
   return(ret)
 }
+
 
 #' Function for estimating the model
 #' @examples

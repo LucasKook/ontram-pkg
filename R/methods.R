@@ -88,6 +88,9 @@ plot.ontram_history <- function(object, col_train = "blue", col_test = "red", ..
          ylab = "negative logLik", ... = ...)
   }
   lines(epoch, object$test_loss, col = col_test)
+  if (!is.null(object$epoch_stop)) {
+    abline(v = object$epoch_stop, lty = 2)
+  }
   legend("topright", legend = c("Train", "Test"), col = c(col_train, col_test),
          bty = "n", lwd = 2)
 }
@@ -96,6 +99,7 @@ plot.ontram_history <- function(object, col_train = "blue", col_test = "red", ..
 save_model.ontram <- function(object, filename, ...) {
   nm_theta <- paste0(filename, "_theta.h5")
   nm_beta <- paste0(filename, "_beta.h5")
+  nm_eta <- paste0(filename, "_eta.h5")
   nm_rest <- paste0(filename, "_r.Rds")
   rest <- list(x_dim = object$x_dim,
                y_dim = object$y_dim,
@@ -103,18 +107,33 @@ save_model.ontram <- function(object, filename, ...) {
                epochs = object$epochs)
   save(rest, file = nm_rest)
   save_model_hdf5(object$mod_baseline, nm_theta)
-  save_model_hdf5(object$mod_shift, nm_beta)
+  if (!is.null(object$mod_shift)) {
+    save_model_hdf5(object$mod_shift, nm_beta)
+  }
+  if (!is.null(object$mod_image)) {
+    save_model_hdf5(object$mod_image, nm_eta)
+  }
 }
 
 # Function for loading ontram models
 load_model.ontram <- function(filename, ...) {
   nm_theta <- paste0(filename, "_theta.h5")
   nm_beta <- paste0(filename, "_beta.h5")
+  nm_eta <- paste0(filename, "_eta.h5") #ag: added
   nm_rest <- paste0(filename, "_r.Rds")
   load(nm_rest)
   mt <- load_model_hdf5(nm_theta)
-  mb <- load_model_hdf5(nm_beta)
-  ret <- append(rest, list(mod_baseline = mt, mod_shift = mb,
+  if (file.exists(nm_beta)) { #ag: model is only loaded when it exists
+    mb <- load_model_hdf5(nm_beta)
+  } else {
+    mb <- NULL
+  }
+  if (file.exists(nm_eta)) {
+    me <- load_model_hdf5(nm_eta) #ag: model is only loaded when it exists
+  } else {
+    me <- NULL
+  }
+  ret <- append(rest, list(mod_baseline = mt, mod_shift = mb, mod_image = me,
                            optimizer = tf$keras$optimizers$Adam(learning_rate = 0.001),
                            distr = tf$sigmoid))
   class(ret) <- "ontram"
