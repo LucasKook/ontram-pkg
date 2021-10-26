@@ -22,8 +22,8 @@
 #' @param img_test image data used for evaluating the model.
 #' @param early_stopping logical. Whether to use early stopping (requires \code{history = TRUE}).
 #' @param patience number of epochs with no improvement after which training will be stopped.
-#' @param min_delta minimum increase in test loss considered no improvement.
-#' @param stop_train logical. Whether to stop training if conditions are fulfilled the first time or whether to continue training.
+#' @param min_delta minimum increase in test loss considered as no improvement.
+#' @param stop_train logical. Whether to stop training if conditions are fulfilled for the first time or whether to continue training.
 #' @param filepath path where to save best model.
 fit_ontram <- function(model, history = FALSE, x_train = NULL,
                        y_train, img_train = NULL,

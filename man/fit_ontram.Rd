@@ -41,11 +41,11 @@ fit_ontram(
 
 \item{patience}{number of epochs with no improvement after which training will be stopped.}
 
-\item{min_delta}{minimum increase in test loss considered no improvement.}
+\item{min_delta}{minimum increase in test loss considered as no improvement.}
 
 \item{filepath}{path where to save best model.}
 
-\item{stop_train}{logical. Whether to stop training if conditions are fulfilled the first time or whether to continue training.}
+\item{stop_train}{logical. Whether to stop training if conditions are fulfilled for the first time or whether to continue training.}
 }
 \description{
 Function for estimating the model
