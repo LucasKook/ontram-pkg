@@ -75,7 +75,7 @@ predict.ontram_rv <- function(model, x, y, im = NULL) {
 #' Plot ontram history
 #' @method plot ontram_history
 #' @export
-plot.ontram_history <- function(object, col_train = "blue", col_test = "red", ...) {
+plot.ontram_history <- function(object, col_train = "blue", col_test = "red", add_best = FALSE, ...) {
   parms <- list(...)
   epoch <- seq_len(length(object$train_loss))
   if ("ylim" %in% names(parms)) {
@@ -88,8 +88,9 @@ plot.ontram_history <- function(object, col_train = "blue", col_test = "red", ..
          ylab = "negative logLik", ... = ...)
   }
   lines(epoch, object$test_loss, col = col_test)
-  if (!is.null(object$epoch_stop)) {
-    abline(v = object$epoch_stop, lty = 2)
+  if (add_best) {
+    if (is.null(object$epoch_best)) stop("`epoch_best` not found.")
+    abline(v = object$epoch_best, lty = 2)
   }
   legend("topright", legend = c("Train", "Test"), col = c(col_train, col_test),
          bty = "n", lwd = 2)

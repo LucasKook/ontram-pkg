@@ -17,6 +17,7 @@ fit_ontram(
   patience = 1,
   min_delta = 0,
   stop_train = TRUE,
+  save_best = FALSE,
   filepath = NULL
 )
 }
@@ -45,9 +46,9 @@ fit_ontram(
 
 \item{stop_train}{logical. Whether to stop training if conditions are fulfilled for the first time or whether to continue training.}
 
-\item{filepath}{path where to save best model if \code{save_best = TRUE}.}
-
 \item{save_best}{logical. Whether best model should be saved as HDF file.}
+
+\item{filepath}{path where to save best model if \code{save_best = TRUE}.}
 }
 \description{
 Function for estimating the model

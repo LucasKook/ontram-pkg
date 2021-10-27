@@ -31,13 +31,23 @@ fit_ontram <- function(model, history = FALSE, x_train = NULL,
                        x_test = NULL, y_test = NULL, img_test = NULL,
                        early_stopping = FALSE, patience = 1,
                        min_delta = 0, stop_train = TRUE,
-                       filepath = NULL) {
+                       save_best = FALSE, filepath = NULL) {
   stopifnot(nrow(x_train) == nrow(y_train))
   stopifnot(ncol(y_train) == model$y_dim)
   if (early_stopping) {
+    stopifnot(history)
     stopifnot(patience >= 1)
     stopifnot(min_delta >= 0)
-    stopifnot(step_size >= 1)
+    if (is.null(y_test)) stop("y_test not found.")
+    if (!is.null(x_train)) {
+      if(is.null(x_test)) stop("`x_test` not found.")
+    }
+    if (!is.null(img_train)) {
+      if (is.null(img_test)) stop("`img_test` not found.")
+    }
+    if (save_best) {
+      if (is.null(filepath) || !dir.exists(filepath)) stop("`filepath` missing or does not exist.")
+    }
   }
   apply_gradient_tf <- tf_function(apply_gradient)
 
@@ -50,8 +60,8 @@ fit_ontram <- function(model, history = FALSE, x_train = NULL,
   message(paste0("Epochs: ", epo <- model$epoch))
   if (history) {
     model_history <- list(train_loss = c(), test_loss = c())
-    if (save_best_only) {
-      model_history <- c(model_history, list(epoch_stop = c())) #ag: if save_best_only = T, epoch at which model stopped is saved
+    if (early_stopping) {
+      model_history <- c(model_history, list(epoch_best = c())) #ag: best model
     }
     class(model_history) <- "ontram_history"
     hist_idxs <- sample(rep(seq_len(10), ceiling(n/10)), n)
@@ -113,6 +123,9 @@ fit_ontram <- function(model, history = FALSE, x_train = NULL,
           if (model_history$test_loss[epo] <= current_min) {
             current_min <- model_history$test_loss[epo]
             n_worse <- 0
+            if (epo == model$epoch) {
+              model_history$epoch_best <- epo
+            }
             if (save_best) {
             save_model.ontram(model, filename = paste0(filepath, "best_model"))
             } else {
@@ -123,8 +136,7 @@ fit_ontram <- function(model, history = FALSE, x_train = NULL,
               n_worse <- n_worse + 1
               if (n_worse == patience) {
                 early_stop <- TRUE
-                model_history$epoch_stop <- epo - patience
-                n_worse <- 0
+                model_history$epoch_best <- epo - patience
               }
             }
           }

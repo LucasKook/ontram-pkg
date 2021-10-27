@@ -4,7 +4,7 @@
 \alias{plot.ontram_history}
 \title{Plot ontram history}
 \usage{
-\method{plot}{ontram_history}(object, col_train = "blue", col_test = "red", ...)
+\method{plot}{ontram_history}(object, col_train = "blue", col_test = "red", add_best = FALSE, ...)
 }
 \description{
 Plot ontram history
