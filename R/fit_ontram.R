@@ -35,7 +35,7 @@ fit_ontram <- function(model, history = FALSE, x_train = NULL,
   stopifnot(nrow(x_train) == nrow(y_train))
   stopifnot(ncol(y_train) == model$y_dim)
   if (early_stopping) {
-    stopifnot(patiece >= 1)
+    stopifnot(patience >= 1)
     stopifnot(min_delta >= 0)
     stopifnot(step_size >= 1)
   }
