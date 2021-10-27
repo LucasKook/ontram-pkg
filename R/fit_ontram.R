@@ -24,18 +24,21 @@
 #' @param patience number of epochs with no improvement after which training will be stopped.
 #' @param min_delta minimum increase in test loss considered as no improvement.
 #' @param stop_train logical. Whether to stop training if conditions are fulfilled for the first time or whether to continue training.
-#' @param filepath path where to save best model.
+#' @param save_best logical. Whether best model should be saved as HDF file.
+#' @param filepath path where to save best model if \code{save_best = TRUE}.
 fit_ontram <- function(model, history = FALSE, x_train = NULL,
                        y_train, img_train = NULL,
                        x_test = NULL, y_test = NULL, img_test = NULL,
                        early_stopping = FALSE, patience = 1,
-                       min_delta = 0, stp_train = TRUE,
+                       min_delta = 0, stop_train = TRUE,
                        filepath = NULL) {
   stopifnot(nrow(x_train) == nrow(y_train))
   stopifnot(ncol(y_train) == model$y_dim)
-  stopifnot(patiece >= 1)
-  stopifnot(min_delta >= 0)
-  stopifnot(step_size >= 1)
+  if (early_stopping) {
+    stopifnot(patiece >= 1)
+    stopifnot(min_delta >= 0)
+    stopifnot(step_size >= 1)
+  }
   apply_gradient_tf <- tf_function(apply_gradient)
 
   n <- nrow(y_train)
@@ -110,31 +113,41 @@ fit_ontram <- function(model, history = FALSE, x_train = NULL,
           if (model_history$test_loss[epo] <= current_min) {
             current_min <- model_history$test_loss[epo]
             n_worse <- 0
+            if (save_best) {
             save_model.ontram(model, filename = paste0(filepath, "best_model"))
+            } else {
+              m_best <- model
+            }
           } else {
             if (model_history$test_loss[epo] - current_min >= min_delta) {
               n_worse <- n_worse + 1
               if (n_worse == patience) {
-                message("Early stopping")
                 early_stop <- TRUE
                 model_history$epoch_stop <- epo - patience
+                n_worse <- 0
               }
             }
           }
       }
     }
     if (early_stop) {
-      if (save_best_only) {
-        model <- load_model.ontram(model, filename = paste0(filepath, "best_model"))
+      if (save_best) {
+        m_best <- load_model.ontram(model, filename = paste0(filepath, "best_model"))
       }
-      break
+      if (stop_train) {
+        message("Early stopping")
+        break
+      }
     }
   }
   end_time <- Sys.time()
   message(paste0("Training took ", end_time - start_time))
   if (history)
     return(model_history)
-  return(invisible(model))
+  if (early_stopping)
+    return(invisible(m_best))
+  else
+    return(invisible(model))
 }
 
 
