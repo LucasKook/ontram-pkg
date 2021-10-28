@@ -164,7 +164,7 @@ load_ontram_history <- function(filepath) {
   df <- df[, -1L]
   history <- list(train_loss = c(), test_loss = c())
 
-  if (nrow(df > 2)) {
+  if (nrow(df) > 2) {
     history <- c(history, list(epoch_best = c()))
     history$epoch_best <- df[3,1]
   }
