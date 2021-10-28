@@ -96,8 +96,9 @@ plot.ontram_history <- function(object, col_train = "blue", col_test = "red", ad
          bty = "n", lwd = 2)
 }
 
-# Function for saving ontram models
-save_model.ontram <- function(object, filename, ...) {
+#' Function for saving ontram models
+#' @export
+save_model_ontram <- function(object, filename, ...) {
   nm_theta <- paste0(filename, "_theta.h5")
   nm_beta <- paste0(filename, "_beta.h5")
   nm_eta <- paste0(filename, "_eta.h5")
@@ -116,8 +117,9 @@ save_model.ontram <- function(object, filename, ...) {
   }
 }
 
-# Function for loading ontram models
-load_model.ontram <- function(filename, ...) {
+#' Function for loading ontram models
+#' @export
+load_model_ontram <- function(filename, ...) {
   nm_theta <- paste0(filename, "_theta.h5")
   nm_beta <- paste0(filename, "_beta.h5")
   nm_eta <- paste0(filename, "_eta.h5") #ag: added
@@ -140,3 +142,35 @@ load_model.ontram <- function(filename, ...) {
   class(ret) <- "ontram"
   return(ret)
 }
+
+#' Function for saving ontram history
+#' @export
+save_ontram_history <- function(object, filepath) {
+  write.table(data.frame(matrix(unlist(object[1:2]), nrow = 2, byrow = TRUE,
+                                dimnames = list(c("train_loss", "test_loss"), NULL))),
+              file = filepath, sep = ",", row.names = TRUE, col.names = FALSE)
+  if (length(object) > 2) {
+    write.table(object$epoch_best, file = filepath, sep = ",",
+                row.names = "epoch_best", col.names = FALSE,
+                append = TRUE)
+  }
+}
+
+#' Function for loading ontram history
+#' @export
+load_ontram_history <- function(filepath) {
+  df <- read.csv(filepath, header = FALSE)
+  rownames(df) <- df[, 1]
+  df <- df[, -1L]
+  history <- list(train_loss = c(), test_loss = c())
+
+  if (nrow(df > 2)) {
+    history <- c(history, list(epoch_best = c()))
+    history$epoch_best <- df[3,1]
+  }
+  history$train_loss <- as.numeric(df[1, ])
+  history$test_loss <- as.numeric(df[2, ])
+  class(history) <- "ontram_history"
+  return(history)
+}
+

@@ -22,7 +22,7 @@ fit_ontram(
 )
 }
 \arguments{
-\item{model}{an object of class "\link[ontram]{ontram}".}
+\item{model}{an object of class "\code{\link{ontram}}".}
 
 \item{history}{logical. If TRUE train and test are returned as list.}
 

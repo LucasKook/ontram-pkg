@@ -12,7 +12,7 @@
 #'     x_test = x_valid, y_test = y_valid)
 #' plot(mo_hist)
 #' @export
-#' @param model an object of class "\link[ontram]{ontram}".
+#' @param model an object of class "\code{\link{ontram}}".
 #' @param history logical. If TRUE train and test are returned as list.
 #' @param x_train tabular data used for training the model.
 #' @param y_train response data (one-hot encoded) used for training the model.
@@ -127,7 +127,7 @@ fit_ontram <- function(model, history = FALSE, x_train = NULL,
               model_history$epoch_best <- epo
             }
             if (save_best) {
-            save_model.ontram(model, filename = paste0(filepath, "best_model"))
+            save_model_ontram(model, filename = paste0(filepath, "best_model"))
             } else {
               m_best <- model
             }
@@ -144,7 +144,7 @@ fit_ontram <- function(model, history = FALSE, x_train = NULL,
     }
     if (early_stop) {
       if (save_best) {
-        m_best <- load_model.ontram(model, filename = paste0(filepath, "best_model"))
+        m_best <- load_model_ontram(model, filename = paste0(filepath, "best_model"))
       }
       if (stop_train) {
         message("Early stopping")
