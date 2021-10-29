@@ -172,6 +172,8 @@ fit_ontram <- function(model, history = FALSE, x_train = NULL,
     ret <- obj[idx, , , drop = FALSE]
   } else if (ndim == 4L) {
     ret <- obj[idx, , , , drop = FALSE]
+  } else if (ndim == 5L) {
+    ret <- obj[idx, , , , , drop = FALSE] #ag: added
   }
   return(ret)
 }
