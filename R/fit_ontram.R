@@ -38,7 +38,7 @@ fit_ontram <- function(model, history = FALSE, x_train = NULL,
     stopifnot(history)
     stopifnot(patience >= 1)
     stopifnot(min_delta >= 0)
-    if (is.null(y_test)) stop("y_test not found.")
+    if (is.null(y_test)) stop("`y_test` not found.")
     if (!is.null(x_train)) {
       if(is.null(x_test)) stop("`x_test` not found.")
     }

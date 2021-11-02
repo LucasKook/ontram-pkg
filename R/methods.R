@@ -96,81 +96,41 @@ plot.ontram_history <- function(object, col_train = "blue", col_test = "red", ad
          bty = "n", lwd = 2)
 }
 
-#' Function for saving ontram models
+#' Simulate Responses
+#' @method simulate ontram
+#' @examples
+#' data("wine", package = "ordinal")
+#' fml <- rating ~ temp + contact
+#' x_train <- model.matrix(fml, data = wine)[, -1L]
+#' y_train <- model.matrix(~ 0 + rating, data = wine)
+#' x_valid <- x_train[1:20,]
+#' y_valid <- y_train[1:20,]
+#' mo <- ontram_polr(x_dim = ncol(x_train), y_dim = ncol(y_train),
+#'                   method = "logit", n_batches = 10, epochs = 50)
+#' fit_ontram(mo, x_train = x_train, y_train = y_train)
+#' simulate(mo, nsim = 1, x = x_valid, y = y_valid)
 #' @export
-save_model_ontram <- function(object, filename, ...) {
-  nm_theta <- paste0(filename, "_theta.h5")
-  nm_beta <- paste0(filename, "_beta.h5")
-  nm_eta <- paste0(filename, "_eta.h5")
-  nm_rest <- paste0(filename, "_r.Rds")
-  rest <- list(x_dim = object$x_dim,
-               y_dim = object$y_dim,
-               n_batches = object$n_batches,
-               epochs = object$epochs)
-  save(rest, file = nm_rest)
-  save_model_hdf5(object$mod_baseline, nm_theta)
-  if (!is.null(object$mod_shift)) {
-    save_model_hdf5(object$mod_shift, nm_beta)
+simulate.ontram <- function(object, nsim = 1, seed = NULL, x = NULL, y, im = NULL, ...) {
+  if (!exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE))
+    runif(1)
+  if (is.null(seed))
+    RNGstate <- get(".Random.seed", envir = .GlobalEnv)
+  else {
+    R.seed <- get(".Random.seed", envir = .GlobalEnv)
+    set.seed(seed)
+    RNGstate <- structure(seed, kind = as.list(RNGkind()))
+    on.exit(assign(".Random.seed", R.seed, envir = .GlobalEnv))
   }
-  if (!is.null(object$mod_image)) {
-    save_model_hdf5(object$mod_image, nm_eta)
-  }
-}
-
-#' Function for loading ontram models
-#' @export
-load_model_ontram <- function(filename, ...) {
-  nm_theta <- paste0(filename, "_theta.h5")
-  nm_beta <- paste0(filename, "_beta.h5")
-  nm_eta <- paste0(filename, "_eta.h5") #ag: added
-  nm_rest <- paste0(filename, "_r.Rds")
-  load(nm_rest)
-  mt <- load_model_hdf5(nm_theta)
-  if (file.exists(nm_beta)) { #ag: model is only loaded when it exists
-    mb <- load_model_hdf5(nm_beta)
+  pr <- predict(object, x = x, y = y, im = im)
+  ret <- apply(pr$pdf, 1, function(p) sample(length(p), nsim, prob = p, replace = TRUE))
+  if (nsim > 1) {
+    tmp <- vector(mode = "list", length = nsim)
+    for (i in 1:nsim) {
+      tmp[[i]] <- ordered(ret[i, ])
+    }
+    ret <- tmp
   } else {
-    mb <- NULL
+    ret <- ordered(ret)
   }
-  if (file.exists(nm_eta)) {
-    me <- load_model_hdf5(nm_eta) #ag: model is only loaded when it exists
-  } else {
-    me <- NULL
-  }
-  ret <- append(rest, list(mod_baseline = mt, mod_shift = mb, mod_image = me,
-                           optimizer = tf$keras$optimizers$Adam(learning_rate = 0.001),
-                           distr = tf$sigmoid))
-  class(ret) <- "ontram"
   return(ret)
 }
-
-#' Function for saving ontram history
-#' @export
-save_ontram_history <- function(object, filepath) {
-  write.table(data.frame(matrix(unlist(object[1:2]), nrow = 2, byrow = TRUE,
-                                dimnames = list(c("train_loss", "test_loss"), NULL))),
-              file = filepath, sep = ",", row.names = TRUE, col.names = FALSE)
-  if (length(object) > 2) {
-    write.table(object$epoch_best, file = filepath, sep = ",",
-                row.names = "epoch_best", col.names = FALSE,
-                append = TRUE)
-  }
-}
-
-#' Function for loading ontram history
-#' @export
-load_ontram_history <- function(filepath) {
-  df <- read.csv(filepath, header = FALSE)
-  rownames(df) <- df[, 1]
-  df <- df[, -1L]
-  history <- list(train_loss = c(), test_loss = c())
-
-  if (nrow(df) > 2) {
-    history <- c(history, list(epoch_best = c()))
-    history$epoch_best <- df[3,1]
-  }
-  history$train_loss <- as.numeric(df[1, ])
-  history$test_loss <- as.numeric(df[2, ])
-  class(history) <- "ontram_history"
-  return(history)
-}
-
