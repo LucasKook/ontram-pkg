@@ -6,24 +6,34 @@
 #' y_train <- model.matrix(~ 0 + rating, data = wine)
 #' x_valid <- x_train[1:20,]
 #' y_valid <- y_train[1:20,]
-#' mo <- ontram_polr(x_dim = ncol(x_train), y_dim = ncol(y_train),
-#'     method = "logit", n_batches = 10, epochs = 50)
-#' mo_hist <- fit_ontram(mo, x_train = x_train, y_train = y_train, history = TRUE,
-#'     x_test = x_valid, y_test = y_valid)
-#' plot(mo_hist)
+#' mo1 <- ontram_polr(x_dim = ncol(x_train), y_dim = ncol(y_train),
+#'                    method = "logit", n_batches = 10, epochs = 50)
+#' mo1hist <- fit_ontram(mo1, x_train = x_train, y_train = y_train, history = TRUE,
+#'                       x_test = x_valid, y_test = y_valid)
+#' plot(mo1hist)
+#'
+#' mbl <- keras_model_sequential() %>%
+#'           layer_dense(units = 16, activation = "relu", input_shape = ncol(x_train)) %>%
+#'           layer_dense(units = 16, activation = "relu") %>%
+#'           layer_dense(units = 16, activation = "relu") %>%
+#'           layer_dense(units = 16, activation = "relu") %>%
+#'           layer_dense(units = ncol(y_train) - 1L)
+#' mo2 <- ontram(mod_bl = mbl, mod_sh = NULL, mod_im = NULL, y_dim = ncol(y_train),
+#'               x_dim = NULL, img_dim = NULL, method = "logit",
+#'               epochs = 50, response_varying = TRUE)
+#' mo2hist <- fit_ontram(mo2, x_train = NULL, y_train = y_train, img_train = x_train,
+#'                       x_test = NULL, y_test = y_valid, img_test = x_valid,
+#'                       history = TRUE, early_stopping = TRUE, stop_train = FALSE)
+#' plot(mo2hist, add_best = TRUE, ylim = c(0, 2.5))
 #' @export
 #' @param model an object of class "\code{\link{ontram}}".
-#' @param history logical. If TRUE train and test are returned as list.
-#' @param x_train tabular data used for training the model.
-#' @param y_train response data (one-hot encoded) used for training the model.
-#' @param img_train image data used for training the model.
-#' @param x_test tabular data used for evaluating the model.
-#' @param y_test response data (one-hot encoded) used for evaluating the model.
-#' @param img_test image data used for evaluating the model.
+#' @param history logical. If TRUE train and test loss are returned as a list.
+#' @param x_train,y_train,img_train data used for training the model.
+#' @param x_test,y_test,img_test data used for evaluating the model.
 #' @param early_stopping logical. Whether to use early stopping (requires \code{history = TRUE}).
 #' @param patience number of epochs with no improvement after which training will be stopped.
 #' @param min_delta minimum increase in test loss considered as no improvement.
-#' @param stop_train logical. Whether to stop training if conditions are fulfilled for the first time or whether to continue training.
+#' @param stop_train logical. Whether model should be trained for all epochs.
 #' @param save_best logical. Whether best model should be saved as HDF file.
 #' @param filepath path where to save best model if \code{save_best = TRUE}.
 fit_ontram <- function(model, history = FALSE, x_train = NULL,
