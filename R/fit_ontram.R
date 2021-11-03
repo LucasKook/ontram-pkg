@@ -2,10 +2,13 @@
 #' @examples
 #' data("wine", package = "ordinal")
 #' fml <- rating ~ temp + contact
-#' x_train <- model.matrix(fml, data = wine)[, -1L]
+#' x_train <- model.matrix(rating ~ temp, data = wine)[, -1L, drop = FALSE]
 #' y_train <- model.matrix(~ 0 + rating, data = wine)
-#' x_valid <- x_train[1:20,]
+#' im_train <- model.matrix(rating ~ contact, data = wine)[, -1L, drop = FALSE]
+#' x_valid <- x_train[1:20, , drop = FALSE]
 #' y_valid <- y_train[1:20,]
+#' im_valid <- im_train[1:20, , drop = FALSE]
+#'
 #' mo1 <- ontram_polr(x_dim = ncol(x_train), y_dim = ncol(y_train),
 #'                    method = "logit", n_batches = 10, epochs = 50)
 #' mo1hist <- fit_ontram(mo1, x_train = x_train, y_train = y_train, history = TRUE,
@@ -13,20 +16,21 @@
 #' plot(mo1hist)
 #'
 #' mbl <- keras_model_sequential() %>%
-#'           layer_dense(units = 16, activation = "relu", input_shape = ncol(x_train)) %>%
-#'           layer_dense(units = 16, activation = "relu") %>%
-#'           layer_dense(units = 16, activation = "relu") %>%
-#'           layer_dense(units = 16, activation = "relu") %>%
-#'           layer_dense(units = ncol(y_train) - 1L)
-#' mo2 <- ontram(mod_bl = mbl, mod_sh = NULL, mod_im = NULL, y_dim = ncol(y_train),
-#'               x_dim = NULL, img_dim = NULL, method = "logit",
-#'               epochs = 50, response_varying = TRUE)
-#' mo2hist <- fit_ontram(mo2, x_train = NULL, y_train = y_train, img_train = x_train,
-#'                       x_test = NULL, y_test = y_valid, img_test = x_valid,
-#'                       history = TRUE, early_stopping = TRUE, stop_train = FALSE)
-#' plot(mo2hist, add_best = TRUE, ylim = c(0, 2.5))
-#' @export
-#' @param model an object of class "\code{\link{ontram}}".
+#'   layer_dense(units = 16, input_shape = 1L, activation = "relu") %>%
+#'   layer_dense(units = 16, activation = "relu") %>%
+#'   layer_dense(units = 16, activation = "relu") %>%
+#'   layer_dense(units = 16, activation = "relu") %>%
+#'   layer_dense(units = ncol(y_train) - 1, activation = "linear")
+#' msh <- mod_shift(ncol(x_train))
+#' mo2 <- ontram(mod_bl = mbl, mod_sh = msh, method = "logit", n_batches = 10,
+#'               epochs = 40, x_dim = 1L, y_dim = ncol(y_train),
+#'               response_varying = TRUE)
+#' mo2hist <- fit_ontram(mo2, x_train = x_train, y_train = y_train, img_train = im_train,
+#'                       x_test = x_valid, y_test = y_valid, img_test = im_valid,
+#'                       history = TRUE, early_stopping = TRUE, stop_train = FALSE,
+#'                       warm_start = TRUE, weights = get_weights_ontram(mo1, w_shift = T))
+#' plot(mo2hist, add_best = TRUE, ylim = c(0,5))
+#' @param model an object of class \code{\link{ontram}}.
 #' @param history logical. If TRUE train and test loss are returned as a list.
 #' @param x_train,y_train,img_train data used for training the model.
 #' @param x_test,y_test,img_test data used for evaluating the model.
@@ -36,12 +40,17 @@
 #' @param stop_train logical. Whether model should be trained for all epochs.
 #' @param save_best logical. Whether best model should be saved as HDF file.
 #' @param filepath path where to save best model if \code{save_best = TRUE}.
+#' @param warm_start logical. Whether initial weights should be non-random.
+#' @param weights output output of \code{\link{get_weights_ontram}} or list of similar structure;
+#' lists with corresponding names ("w_baseline", "w_shift", "w_image") containing weights as arrays.
+#' @export
 fit_ontram <- function(model, history = FALSE, x_train = NULL,
                        y_train, img_train = NULL,
                        x_test = NULL, y_test = NULL, img_test = NULL,
                        early_stopping = FALSE, patience = 1,
-                       min_delta = 0, stop_train = TRUE,
-                       save_best = FALSE, filepath = NULL) {
+                       min_delta = 0, stop_train = FALSE,
+                       save_best = FALSE, filepath = NULL,
+                       warm_start = FALSE, weights = NULL) {
   stopifnot(nrow(x_train) == nrow(y_train))
   stopifnot(ncol(y_train) == model$y_dim)
   if (early_stopping) {
@@ -71,14 +80,17 @@ fit_ontram <- function(model, history = FALSE, x_train = NULL,
   if (history) {
     model_history <- list(train_loss = c(), test_loss = c())
     if (early_stopping) {
-      model_history <- c(model_history, list(epoch_best = c())) #ag: best model
+      model_history <- c(model_history, list(epoch_best = c()))
     }
     class(model_history) <- "ontram_history"
     hist_idxs <- sample(rep(seq_len(10), ceiling(n/10)), n)
   }
-  early_stop <- FALSE #ag: early stopping initials
+  early_stop <- FALSE
   if (early_stopping) {
     current_min <- Inf
+  }
+  if (warm_start) {
+    set_weights_ontram(model, weights = weights)
   }
   for (epo in seq_len(epo)) {
     message(paste0("Training epoch: ", epo))
@@ -128,8 +140,7 @@ fit_ontram <- function(model, history = FALSE, x_train = NULL,
       test_loss <- predict(model, x = x_test, y = y_test, im = img_test)$negLogLik
       model_history$train_loss <- append(model_history$train_loss, train_loss)
       model_history$test_loss <- append(model_history$test_loss, test_loss)
-
-      if (early_stopping) { #ag: early stopping implementation
+      if (early_stopping) {
           if (model_history$test_loss[epo] <= current_min) {
             current_min <- model_history$test_loss[epo]
             n_worse <- 0
@@ -172,7 +183,6 @@ fit_ontram <- function(model, history = FALSE, x_train = NULL,
     return(invisible(model))
 }
 
-
 # not very elegant, look for different solution
 .batch_subset <- function(obj, idx, dim) {
   ndim <- length(dim)
@@ -187,7 +197,6 @@ fit_ontram <- function(model, history = FALSE, x_train = NULL,
   }
   return(ret)
 }
-
 
 #' Function for estimating the model
 #' @examples
