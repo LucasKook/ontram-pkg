@@ -134,3 +134,82 @@ simulate.ontram <- function(object, nsim = 1, seed = NULL, x = NULL, y, im = NUL
   }
   return(ret)
 }
+
+#' Set initial weights
+#' @method warm_start ontram
+#' @param model an object of class \code{\link{ontram}}.
+#' @param model_w an object of class \code{\link[tram]{tram}} or \code{\link{ontram}} from which weights are taken.
+#' @examples
+#' library(tram)
+#' data("wine", package = "ordinal")
+#' fml <- rating ~ temp + contact
+#' x_train <- model.matrix(fml, data = wine)[, -1L]
+#' y_train <- model.matrix(~ 0 + rating, data = wine)
+#' mp <- Polr(fml, data = wine)
+#' mo <- ontram_polr(x_dim = ncol(x_train), y_dim = ncol(y_train))
+#' coef(mp, with_baseline = T)
+#' warm_start(mo, mp, "all")
+#' weights(mo)
+#' @export
+warm_start.ontram <- function(model, model_w, which = c("all", "baseline only", "shift only")) {
+  K <- model$y_dim
+  x_dim <- model$x_dim
+  w <- vector(mode = "list", length = 2)
+  names(w) <- c("w_baseline", "w_shift")
+  if ("tram" %in% class(model_w)) {
+    w$w_baseline <- list(matrix(coef(model_w, with_baseline = T)[1:K-1],
+                                nrow = 1, ncol = K-1))
+    w$w_shift <- list(matrix(coef(model_w),
+                             nrow = x_dim, ncol = 1))
+    if (which %in% "baseline only") {
+      model$mod_baseline$set_weights(w$w_baseline)
+    }
+    if (which %in% "shift only") {
+      model$mod_shift$set_weights(w$w_shift)
+    }
+    if (which %in% "all") {
+      model$mod_baseline$set_weights(w$w_baseline)
+      model$mod_shift$set_weights(w$w_shift)
+    }
+  }
+  if ("ontram" %in% class(model_w)) {
+    w$w_baseline <- model_w$mod_baseline$get_weights()
+    if (!is.null(model_w$mod_shift)) {
+      w$w_shift <- model_w$mod_shift$get_weights()
+    }
+    if (which %in% "baseline only") {
+      model$mod_baseline$set_weights(w$w_baseline)
+    }
+    if (which %in% "shift only") {
+      model$mod_shift$set_weights(w$w_shift)
+    }
+    if (which %in% "all") {
+      model$mod_baseline$set_weights(w$w_baseline)
+      model$mod_shift$set_weights(w$w_shift)
+    }
+  }
+  return(invisible(model))
+}
+
+#' Extract model weights
+#' @method weights ontram
+#' @examples
+#' data("wine", package = "ordinal")
+#' fml <- rating ~ temp + contact
+#' x_train <- model.matrix(fml, data = wine)[, -1L]
+#' y_train <- model.matrix(~ 0 + rating, data = wine)
+#' mo <- ontram_polr(x_dim = ncol(x_train), y_dim = ncol(y_train))
+#' weights(mo)
+#' @export
+weights.ontram <- function(model) {
+  ret <- vector(mode = "list")
+  ret$w_baseline <- model$mod_baseline$get_weights()
+  if (!is.null(model$mod_shift)) {
+    ret$w_shift <- model$mod_shift$get_weights()
+  }
+  if (!is.null(model$mod_image)) {
+    ret$w_image <- model$mod_image$get_weights()
+  }
+  return(ret)
+}
+

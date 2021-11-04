@@ -2,12 +2,10 @@
 #' @examples
 #' data("wine", package = "ordinal")
 #' fml <- rating ~ temp + contact
-#' x_train <- model.matrix(rating ~ temp, data = wine)[, -1L, drop = FALSE]
+#' x_train <- model.matrix(fml, data = wine)[, -1L]
 #' y_train <- model.matrix(~ 0 + rating, data = wine)
-#' im_train <- model.matrix(rating ~ contact, data = wine)[, -1L, drop = FALSE]
-#' x_valid <- x_train[1:20, , drop = FALSE]
+#' x_valid <- x_train[1:20,]
 #' y_valid <- y_train[1:20,]
-#' im_valid <- im_train[1:20, , drop = FALSE]
 #'
 #' mo1 <- ontram_polr(x_dim = ncol(x_train), y_dim = ncol(y_train),
 #'                    method = "logit", n_batches = 10, epochs = 50)
@@ -16,20 +14,18 @@
 #' plot(mo1hist)
 #'
 #' mbl <- keras_model_sequential() %>%
-#'   layer_dense(units = 16, input_shape = 1L, activation = "relu") %>%
-#'   layer_dense(units = 16, activation = "relu") %>%
-#'   layer_dense(units = 16, activation = "relu") %>%
-#'   layer_dense(units = 16, activation = "relu") %>%
-#'   layer_dense(units = ncol(y_train) - 1, activation = "linear")
-#' msh <- mod_shift(ncol(x_train))
-#' mo2 <- ontram(mod_bl = mbl, mod_sh = msh, method = "logit", n_batches = 10,
-#'               epochs = 40, x_dim = 1L, y_dim = ncol(y_train),
-#'               response_varying = TRUE)
-#' mo2hist <- fit_ontram(mo2, x_train = x_train, y_train = y_train, img_train = im_train,
-#'                       x_test = x_valid, y_test = y_valid, img_test = im_valid,
-#'                       history = TRUE, early_stopping = TRUE, stop_train = FALSE,
-#'                       warm_start = TRUE, weights = get_weights_ontram(mo1, w_shift = T))
-#' plot(mo2hist, add_best = TRUE, ylim = c(0,5))
+#'           layer_dense(units = 16, activation = "relu", input_shape = ncol(x_train)) %>%
+#'           layer_dense(units = 16, activation = "relu") %>%
+#'           layer_dense(units = 16, activation = "relu") %>%
+#'           layer_dense(units = 16, activation = "relu") %>%
+#'           layer_dense(units = ncol(y_train) - 1L)
+#' mo2 <- ontram(mod_bl = mbl, mod_sh = NULL, mod_im = NULL, y_dim = ncol(y_train),
+#'               x_dim = NULL, img_dim = NULL, method = "logit",
+#'               epochs = 50, response_varying = TRUE)
+#' mo2hist <- fit_ontram(mo2, x_train = NULL, y_train = y_train, img_train = x_train,
+#'                       x_test = NULL, y_test = y_valid, img_test = x_valid,
+#'                       history = TRUE, early_stopping = TRUE, stop_train = FALSE)
+#' plot(mo2hist, add_best = TRUE, ylim = c(0, 2.5))
 #' @param model an object of class \code{\link{ontram}}.
 #' @param history logical. If TRUE train and test loss are returned as a list.
 #' @param x_train,y_train,img_train data used for training the model.
