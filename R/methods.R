@@ -135,10 +135,16 @@ simulate.ontram <- function(object, nsim = 1, seed = NULL, x = NULL, y, im = NUL
   return(ret)
 }
 
+# generic function
+#' @export
+warm_start <- function(model, ...) {
+  UseMethod("warm_start")
+}
+
 #' Set initial weights
 #' @method warm_start ontram
 #' @param model an object of class \code{\link{ontram}}.
-#' @param model_w an object of class \code{\link[tram]{tram}} or \code{\link{ontram}} from which weights are taken.
+#' @param tram an object of class \code{\link[tram]{tram}} from which model weights are taken.
 #' @examples
 #' library(tram)
 #' data("wine", package = "ordinal")
@@ -149,27 +155,93 @@ simulate.ontram <- function(object, nsim = 1, seed = NULL, x = NULL, y, im = NUL
 #' mo <- ontram_polr(x_dim = ncol(x_train), y_dim = ncol(y_train))
 #' coef(mp, with_baseline = T)
 #' warm_start(mo, mp, "all")
-#' weights(mo)
+#' mod_weights(mo)
 #' @export
-warm_start.ontram <- function(model, model_w, which = c("all", "baseline only", "shift only")) {
+warm_start.ontram <- function(model, tram, which = c("all", "baseline only", "shift only")) {
+  stopifnot(which %in% c("all", "baseline only", "shift only"))
+  K <- model$y_dim
+  x_dim <- model$x_dim
+  w <- vector(mode = "list", length = 2)
+  names(w) <- c("w_baseline", "w_shift")
+  w$w_baseline <- list(matrix(coef(tram, with_baseline = T)[1:K-1],
+                              nrow = 1, ncol = K-1))
+  if (!is.null(coef(tram))) {
+    w$w_shift <- list(matrix(coef(tram),
+                             nrow = x_dim, ncol = 1))
+  }
+  if (which %in% "baseline only") {
+    model$mod_baseline$set_weights(w$w_baseline)
+  }
+  if (which %in% "shift only") {
+    model$mod_shift$set_weights(w$w_shift)
+  }
+  if (which %in% "all") {
+    model$mod_baseline$set_weights(w$w_baseline)
+    model$mod_shift$set_weights(w$w_shift)
+  }
+  return(invisible(model))
+}
+
+#' Set initial weights
+#' @method warm_start ontram_rv
+#' @param model an object of class \code{ontram_rv}.
+#' @param model_w an object of class \code{\link[tram]{tram}}, \code{ontram_rv} or \code{\link{ontram}}
+#' from which model weights are taken.
+#' @examples
+#' library(tram)
+#' set.seed(2021)
+#' data("wine", package = "ordinal")
+#' wine$noise <- rnorm(nrow(wine), sd = 0.3) + as.numeric(wine$rating)
+#' fml <- rating ~ temp + contact
+#' x_train <- model.matrix(fml, data = wine)[, -1L, drop = FALSE]
+#' y_train <- model.matrix(~ 0 + rating, data = wine)
+#' im_train <- model.matrix(rating ~ noise, data = wine)[, -1L, drop = FALSE]
+#'
+#' mp <- Polr(fml, data = wine)
+#' mbl1 <- keras_model_sequential() %>%
+#'          layer_dense(units = 4, input_shape = 1L, activation = "tanh") %>%
+#'          layer_dense(ncol(y_train) - 1)
+#' msh1 <- mod_shift(ncol(x_train))
+#' mo_rv1 <- ontram(mod_bl = mbl1, mod_sh = msh1, method = "logit",
+#'                  x_dim = ncol(x_train), y_dim = ncol(y_train),
+#'                  response_varying = TRUE)
+#' fit_ontram(mo_rv1, x_train = x_train, y_train = y_train, img_train = im_train)
+#'
+#' mbl2 <- keras_model_sequential() %>%
+#'          layer_dense(units = 4, input_shape = 1L, activation = "tanh") %>%
+#'          layer_dense(ncol(y_train) - 1)
+#' msh2 <- mod_shift(ncol(x_train))
+#' mo_rv2 <- ontram(mod_bl = mbl2, mod_sh = msh2, method = "logit",
+#'                  x_dim = ncol(x_train), y_dim = ncol(y_train),
+#'                  response_varying = TRUE)
+#' mod_weights(mo_rv2)
+#' warm_start(mo_rv2, mo_rv1, "baseline only")
+#' mod_weights(mo_rv2)
+#' coef(mp)
+#' warm_start(mo_rv2, mp, "shift only")
+#' mod_weights(mo_rv2)
+
+#' @export
+warm_start.ontram_rv <- function(model, model_w, which = c("all", "baseline only", "shift only")) {
+  stopifnot(which %in% c("all", "baseline only", "shift only"))
+  if (identical(mod_weights(model), mod_weights(model_w))) {
+    stop("`model` and `model_w` are identical.")
+  }
   K <- model$y_dim
   x_dim <- model$x_dim
   w <- vector(mode = "list", length = 2)
   names(w) <- c("w_baseline", "w_shift")
   if ("tram" %in% class(model_w)) {
-    w$w_baseline <- list(matrix(coef(model_w, with_baseline = T)[1:K-1],
-                                nrow = 1, ncol = K-1))
     w$w_shift <- list(matrix(coef(model_w),
                              nrow = x_dim, ncol = 1))
     if (which %in% "baseline only") {
-      model$mod_baseline$set_weights(w$w_baseline)
+      stop("If which = `baseline only` model_w must be of class `ontram_rv`.")
     }
     if (which %in% "shift only") {
       model$mod_shift$set_weights(w$w_shift)
     }
     if (which %in% "all") {
-      model$mod_baseline$set_weights(w$w_baseline)
-      model$mod_shift$set_weights(w$w_shift)
+      stop("If which = `all` model_w must be of class `ontram_rv`.")
     }
   }
   if ("ontram" %in% class(model_w)) {
@@ -191,17 +263,23 @@ warm_start.ontram <- function(model, model_w, which = c("all", "baseline only", 
   return(invisible(model))
 }
 
+# generic function
+#' @export
+mod_weights <- function(model, ...) {
+ UseMethod("mod_weights")
+}
+
 #' Extract model weights
-#' @method weights ontram
+#' @method mod_weights ontram
 #' @examples
 #' data("wine", package = "ordinal")
 #' fml <- rating ~ temp + contact
 #' x_train <- model.matrix(fml, data = wine)[, -1L]
 #' y_train <- model.matrix(~ 0 + rating, data = wine)
 #' mo <- ontram_polr(x_dim = ncol(x_train), y_dim = ncol(y_train))
-#' weights(mo)
+#' mod_weights(mo)
 #' @export
-weights.ontram <- function(model) {
+mod_weights.ontram <- function(model) {
   ret <- vector(mode = "list")
   ret$w_baseline <- model$mod_baseline$get_weights()
   if (!is.null(model$mod_shift)) {

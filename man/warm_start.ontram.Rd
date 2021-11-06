@@ -4,12 +4,12 @@
 \alias{warm_start.ontram}
 \title{Set initial weights}
 \usage{
-\method{warm_start}{ontram}(model, model_w, which = c("all", "baseline only", "shift only"))
+\method{warm_start}{ontram}(model, tram, which = c("all", "baseline only", "shift only"))
 }
 \arguments{
 \item{model}{an object of class \code{\link{ontram}}.}
 
-\item{model_w}{an object of class \code{\link[tram]{tram}} or \code{\link{ontram}} from which weights are taken.}
+\item{tram}{an object of class \code{\link[tram]{tram}} from which model weights are taken.}
 }
 \description{
 Set initial weights
@@ -24,5 +24,5 @@ mp <- Polr(fml, data = wine)
 mo <- ontram_polr(x_dim = ncol(x_train), y_dim = ncol(y_train))
 coef(mp, with_baseline = T)
 warm_start(mo, mp, "all")
-weights(mo)
+mod_weights(mo)
 }
