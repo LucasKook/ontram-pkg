@@ -6,9 +6,9 @@
 #' @examples
 #' m <- mod_baseline(5L)
 #' @export
-mod_baseline <- function(y_dim) {
+mod_baseline <- function(y_dim, ...) {
   mod <- keras_model_sequential() %>%
-    layer_dense(units = y_dim - 1L, input_shape = 1L, use_bias = FALSE)
+    layer_dense(units = y_dim - 1L, input_shape = 1L, use_bias = FALSE, ... = ...)
   return(mod)
 }
 

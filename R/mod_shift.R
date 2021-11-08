@@ -6,8 +6,8 @@
 #' @examples
 #' m <- mod_shift(5L)
 #' @export
-mod_shift <- function(x_dim) {
+mod_shift <- function(x_dim, ...) {
   mod <- keras_model_sequential() %>%
-    layer_dense(units = 1, input_shape = x_dim, use_bias = FALSE)
+    layer_dense(units = 1, input_shape = x_dim, use_bias = FALSE, ... = ...)
   return(mod)
 }
