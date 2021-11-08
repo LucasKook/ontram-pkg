@@ -4,7 +4,7 @@
 \alias{mod_shift}
 \title{Sequential model for the shift function}
 \usage{
-mod_shift(x_dim)
+mod_shift(x_dim, ...)
 }
 \value{
 Returns a model of type \code{\link[keras]{keras_mod_sequential}}
