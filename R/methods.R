@@ -75,7 +75,7 @@ predict.ontram_rv <- function(model, x, y, im = NULL) {
 #' Plot ontram history
 #' @method plot ontram_history
 #' @export
-plot.ontram_history <- function(object, col_train = "blue", col_test = "red", ...) {
+plot.ontram_history <- function(object, col_train = "blue", col_test = "red", add_best = FALSE, ...) {
   parms <- list(...)
   epoch <- seq_len(length(object$train_loss))
   if ("ylim" %in% names(parms)) {
@@ -88,35 +88,199 @@ plot.ontram_history <- function(object, col_train = "blue", col_test = "red", ..
          ylab = "negative logLik", ... = ...)
   }
   lines(epoch, object$test_loss, col = col_test)
+  if (add_best) {
+    if (is.null(object$epoch_best)) stop("`epoch_best` not found.")
+    abline(v = object$epoch_best, lty = 2)
+  }
   legend("topright", legend = c("Train", "Test"), col = c(col_train, col_test),
          bty = "n", lwd = 2)
 }
 
-# Function for saving ontram models
-save_model.ontram <- function(object, filename, ...) {
-  nm_theta <- paste0(filename, "_theta.h5")
-  nm_beta <- paste0(filename, "_beta.h5")
-  nm_rest <- paste0(filename, "_r.Rds")
-  rest <- list(x_dim = object$x_dim,
-               y_dim = object$y_dim,
-               n_batches = object$n_batches,
-               epochs = object$epochs)
-  save(rest, file = nm_rest)
-  save_model_hdf5(object$mod_baseline, nm_theta)
-  save_model_hdf5(object$mod_shift, nm_beta)
-}
-
-# Function for loading ontram models
-load_model.ontram <- function(filename, ...) {
-  nm_theta <- paste0(filename, "_theta.h5")
-  nm_beta <- paste0(filename, "_beta.h5")
-  nm_rest <- paste0(filename, "_r.Rds")
-  load(nm_rest)
-  mt <- load_model_hdf5(nm_theta)
-  mb <- load_model_hdf5(nm_beta)
-  ret <- append(rest, list(mod_baseline = mt, mod_shift = mb,
-                           optimizer = tf$keras$optimizers$Adam(learning_rate = 0.001),
-                           distr = tf$sigmoid))
-  class(ret) <- "ontram"
+#' Simulate Responses
+#' @method simulate ontram
+#' @examples
+#' data("wine", package = "ordinal")
+#' fml <- rating ~ temp + contact
+#' x_train <- model.matrix(fml, data = wine)[, -1L]
+#' y_train <- model.matrix(~ 0 + rating, data = wine)
+#' x_valid <- x_train[1:20,]
+#' y_valid <- y_train[1:20,]
+#' mo <- ontram_polr(x_dim = ncol(x_train), y_dim = ncol(y_train),
+#'                   method = "logit", n_batches = 10, epochs = 50)
+#' fit_ontram(mo, x_train = x_train, y_train = y_train)
+#' simulate(mo, nsim = 1, x = x_valid, y = y_valid)
+#' @export
+simulate.ontram <- function(object, nsim = 1, seed = NULL, x = NULL, y, im = NULL, levels = 1:ncol(y), ...) {
+  if (!is.null(seed)) {
+    set.seed(seed)
+  }
+  pr <- predict(object, x = x, y = y, im = im)
+  ret <- apply(pr$pdf, 1, function(p) sample(levels, nsim, prob = p, replace = TRUE))
+  if (nsim > 1) {
+    tmp <- vector(mode = "list", length = nsim)
+    for (i in 1:nsim) {
+      tmp[[i]] <- ordered(ret[i, ], levels = levels)
+    }
+    ret <- tmp
+  } else {
+    ret <- ordered(ret, levels = levels)
+  }
   return(ret)
 }
+
+# generic function
+#' @export
+warm_start <- function(model, ...) {
+  UseMethod("warm_start")
+}
+
+#' Set initial weights
+#' @method warm_start ontram
+#' @param model an object of class \code{\link{ontram}}.
+#' @param tram an object of class \code{\link[tram]{tram}} from which model weights are taken.
+#' @examples
+#' library(tram)
+#' data("wine", package = "ordinal")
+#' fml <- rating ~ temp + contact
+#' x_train <- model.matrix(fml, data = wine)[, -1L]
+#' y_train <- model.matrix(~ 0 + rating, data = wine)
+#' mp <- Polr(fml, data = wine)
+#' mo <- ontram_polr(x_dim = ncol(x_train), y_dim = ncol(y_train))
+#' coef(mp, with_baseline = T)
+#' warm_start(mo, mp, "all")
+#' mod_weights(mo)
+#' @export
+warm_start.ontram <- function(model, tram, which = c("all", "baseline only", "shift only")) {
+  stopifnot(which %in% c("all", "baseline only", "shift only"))
+  K <- model$y_dim
+  x_dim <- model$x_dim
+  w <- vector(mode = "list", length = 2)
+  names(w) <- c("w_baseline", "w_shift")
+  w$w_baseline <- list(matrix(coef(tram, with_baseline = T)[1:K-1],
+                              nrow = 1, ncol = K-1))
+  if (!is.null(coef(tram))) {
+    w$w_shift <- list(matrix(coef(tram),
+                             nrow = x_dim, ncol = 1))
+  }
+  if (which %in% "baseline only") {
+    model$mod_baseline$set_weights(w$w_baseline)
+  }
+  if (which %in% "shift only") {
+    model$mod_shift$set_weights(w$w_shift)
+  }
+  if (which %in% "all") {
+    model$mod_baseline$set_weights(w$w_baseline)
+    model$mod_shift$set_weights(w$w_shift)
+  }
+  return(invisible(model))
+}
+
+#' Set initial weights
+#' @method warm_start ontram_rv
+#' @param model an object of class \code{ontram_rv}.
+#' @param model_w an object of class \code{\link[tram]{tram}}, \code{ontram_rv} or \code{\link{ontram}}
+#' from which model weights are taken.
+#' @examples
+#' library(tram)
+#' set.seed(2021)
+#' data("wine", package = "ordinal")
+#' wine$noise <- rnorm(nrow(wine), sd = 0.3) + as.numeric(wine$rating)
+#' fml <- rating ~ temp + contact
+#' x_train <- model.matrix(fml, data = wine)[, -1L, drop = FALSE]
+#' y_train <- model.matrix(~ 0 + rating, data = wine)
+#' im_train <- model.matrix(rating ~ noise, data = wine)[, -1L, drop = FALSE]
+#'
+#' mp <- Polr(fml, data = wine)
+#' mbl1 <- keras_model_sequential() %>%
+#'          layer_dense(units = 4, input_shape = 1L, activation = "tanh") %>%
+#'          layer_dense(ncol(y_train) - 1)
+#' msh1 <- mod_shift(ncol(x_train))
+#' mo_rv1 <- ontram(mod_bl = mbl1, mod_sh = msh1, method = "logit",
+#'                  x_dim = ncol(x_train), y_dim = ncol(y_train),
+#'                  response_varying = TRUE)
+#' fit_ontram(mo_rv1, x_train = x_train, y_train = y_train, img_train = im_train)
+#'
+#' mbl2 <- keras_model_sequential() %>%
+#'          layer_dense(units = 4, input_shape = 1L, activation = "tanh") %>%
+#'          layer_dense(ncol(y_train) - 1)
+#' msh2 <- mod_shift(ncol(x_train))
+#' mo_rv2 <- ontram(mod_bl = mbl2, mod_sh = msh2, method = "logit",
+#'                  x_dim = ncol(x_train), y_dim = ncol(y_train),
+#'                  response_varying = TRUE)
+#' mod_weights(mo_rv2)
+#' warm_start(mo_rv2, mo_rv1, "baseline only")
+#' mod_weights(mo_rv2)
+#' coef(mp)
+#' warm_start(mo_rv2, mp, "shift only")
+#' mod_weights(mo_rv2)
+
+#' @export
+warm_start.ontram_rv <- function(model, model_w, which = c("all", "baseline only", "shift only")) {
+  stopifnot(which %in% c("all", "baseline only", "shift only"))
+  if (identical(mod_weights(model), mod_weights(model_w))) {
+    stop("`model` and `model_w` are identical.")
+  }
+  K <- model$y_dim
+  x_dim <- model$x_dim
+  w <- vector(mode = "list", length = 2)
+  names(w) <- c("w_baseline", "w_shift")
+  if ("tram" %in% class(model_w)) {
+    w$w_shift <- list(matrix(coef(model_w),
+                             nrow = x_dim, ncol = 1))
+    if (which %in% "baseline only") {
+      stop("If which = `baseline only` model_w must be of class `ontram_rv`.")
+    }
+    if (which %in% "shift only") {
+      model$mod_shift$set_weights(w$w_shift)
+    }
+    if (which %in% "all") {
+      stop("If which = `all` model_w must be of class `ontram_rv`.")
+    }
+  }
+  if ("ontram" %in% class(model_w)) {
+    w$w_baseline <- model_w$mod_baseline$get_weights()
+    if (!is.null(model_w$mod_shift)) {
+      w$w_shift <- model_w$mod_shift$get_weights()
+    }
+    if (which %in% "baseline only") {
+      model$mod_baseline$set_weights(w$w_baseline)
+    }
+    if (which %in% "shift only") {
+      model$mod_shift$set_weights(w$w_shift)
+    }
+    if (which %in% "all") {
+      model$mod_baseline$set_weights(w$w_baseline)
+      model$mod_shift$set_weights(w$w_shift)
+    }
+  }
+  return(invisible(model))
+}
+
+# generic function
+#' @export
+mod_weights <- function(model, ...) {
+ UseMethod("mod_weights")
+}
+
+#' Extract model weights
+#' @method mod_weights ontram
+#' @examples
+#' data("wine", package = "ordinal")
+#' fml <- rating ~ temp + contact
+#' x_train <- model.matrix(fml, data = wine)[, -1L]
+#' y_train <- model.matrix(~ 0 + rating, data = wine)
+#' mo <- ontram_polr(x_dim = ncol(x_train), y_dim = ncol(y_train))
+#' mod_weights(mo)
+#' @export
+mod_weights.ontram <- function(model) {
+  ret <- vector(mode = "list")
+  ret$w_baseline <- model$mod_baseline$get_weights()
+  if (!is.null(model$mod_shift)) {
+    ret$w_shift <- model$mod_shift$get_weights()
+  }
+  if (!is.null(model$mod_image)) {
+    ret$w_image <- model$mod_image$get_weights()
+  }
+  return(ret)
+}
+
