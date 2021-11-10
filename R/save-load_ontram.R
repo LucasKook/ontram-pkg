@@ -46,7 +46,7 @@ load_model_ontram <- function(filename, ...) {
                            distr = rest$distr))
   class(ret) <- "ontram"
   if (ret$response_varying) {
-    class(ret) <- append("ontram_rv", class(ret))
+    class(ret) <- c("ontram_rv", class(ret))
   }
   return(ret)
 }
