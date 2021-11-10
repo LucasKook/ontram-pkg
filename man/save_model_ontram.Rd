@@ -2,13 +2,10 @@
 % Please edit documentation in R/save-load_ontram.R
 \name{save_model_ontram}
 \alias{save_model_ontram}
-\alias{load_model_ontram}
-\title{Save/Load ontram model}
+\title{Save ontram model}
 \usage{
 save_model_ontram(object, filename, ...)
-
-load_model_ontram(filename, ...)
 }
 \description{
-Save/Load ontram model
+Save ontram model
 }

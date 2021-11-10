@@ -110,27 +110,20 @@ plot.ontram_history <- function(object, col_train = "blue", col_test = "red", ad
 #' fit_ontram(mo, x_train = x_train, y_train = y_train)
 #' simulate(mo, nsim = 1, x = x_valid, y = y_valid)
 #' @export
-simulate.ontram <- function(object, nsim = 1, seed = NULL, x = NULL, y, im = NULL, ...) {
-  if (!exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE))
-    runif(1)
-  if (is.null(seed))
-    RNGstate <- get(".Random.seed", envir = .GlobalEnv)
-  else {
-    R.seed <- get(".Random.seed", envir = .GlobalEnv)
+simulate.ontram <- function(object, nsim = 1, seed = NULL, x = NULL, y, im = NULL, levels = 1:ncol(y), ...) {
+  if (!is.null(seed)) {
     set.seed(seed)
-    RNGstate <- structure(seed, kind = as.list(RNGkind()))
-    on.exit(assign(".Random.seed", R.seed, envir = .GlobalEnv))
   }
   pr <- predict(object, x = x, y = y, im = im)
-  ret <- apply(pr$pdf, 1, function(p) sample(length(p), nsim, prob = p, replace = TRUE))
+  ret <- apply(pr$pdf, 1, function(p) sample(levels, nsim, prob = p, replace = TRUE))
   if (nsim > 1) {
     tmp <- vector(mode = "list", length = nsim)
     for (i in 1:nsim) {
-      tmp[[i]] <- ordered(ret[i, ])
+      tmp[[i]] <- ordered(ret[i, ], levels = levels)
     }
     ret <- tmp
   } else {
-    ret <- ordered(ret)
+    ret <- ordered(ret, levels = levels)
   }
   return(ret)
 }

@@ -1,8 +1,4 @@
-#' Save/Load ontram model
-#' @name save_model_ontram
-#' @aliases save_model_ontram
-#' @aliases load_model_ontram
-#' @rdname save_model_ontram
+#' Save ontram model
 #' @export
 save_model_ontram <- function(object, filename, ...) {
   nm_theta <- paste0(filename, "_theta.h5")
@@ -12,7 +8,10 @@ save_model_ontram <- function(object, filename, ...) {
   rest <- list(x_dim = object$x_dim,
                y_dim = object$y_dim,
                n_batches = object$n_batches,
-               epochs = object$epochs)
+               epochs = object$epochs,
+               distr = object$distr,
+               lr = object$optimizer$lr$numpy(),
+               response_varying = object$response_varying)
   save(rest, file = nm_rest)
   save_model_hdf5(object$mod_baseline, nm_theta)
   if (!is.null(object$mod_shift)) {
@@ -23,7 +22,7 @@ save_model_ontram <- function(object, filename, ...) {
   }
 }
 
-#' @rdname save_model_ontram
+#' Load ontram model
 #' @export
 load_model_ontram <- function(filename, ...) {
   nm_theta <- paste0(filename, "_theta.h5")
@@ -43,8 +42,11 @@ load_model_ontram <- function(filename, ...) {
     me <- NULL
   }
   ret <- append(rest, list(mod_baseline = mt, mod_shift = mb, mod_image = me,
-                           optimizer = tf$keras$optimizers$Adam(learning_rate = 0.001),
-                           distr = tf$sigmoid))
+                           optimizer = tf$keras$optimizers$Adam(learning_rate = rest$lr),
+                           distr = rest$distr))
   class(ret) <- "ontram"
+  if (ret$response_varying) {
+    class(ret) <- append("ontram_rv", class(ret))
+  }
   return(ret)
 }

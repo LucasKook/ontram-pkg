@@ -1,8 +1,4 @@
-#' Save/Load ontram history
-#' @name save_history_ontram
-#' @aliases save_ontram_history
-#' @aliases load_ontram_history
-#' @rdname save_history_ontram
+#' Save ontram history
 #' @export
 save_ontram_history <- function(object, filepath) {
   write.table(data.frame(matrix(unlist(object[1:2]), nrow = 2, byrow = TRUE,
@@ -15,7 +11,7 @@ save_ontram_history <- function(object, filepath) {
   }
 }
 
-#' @rdname save_history_ontram
+#' Save ontram history
 #' @export
 load_ontram_history <- function(filepath) {
   df <- read.csv(filepath, header = FALSE)

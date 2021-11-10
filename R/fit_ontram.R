@@ -61,7 +61,8 @@ fit_ontram <- function(model, history = FALSE, x_train = NULL,
       if (is.null(img_test)) stop("`img_test` not found.")
     }
     if (save_best) {
-      if (is.null(filepath) || !dir.exists(filepath)) stop("`filepath` missing or does not exist.")
+      if (is.null(filepath)) stop("`filepath` is missing.")
+      if (!dir.exists(filepath)) dir.create(filepath)
     }
   }
   apply_gradient_tf <- tf_function(apply_gradient)
