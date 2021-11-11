@@ -39,7 +39,7 @@
 #' @param warm_start logical. Whether initial weights should be non-random.
 #' @param weights output output of \code{\link{get_weights_ontram}} or list of similar structure;
 #' @param eval_batchwise logical.
-#' @param bs batch size.
+#' @param bs number of batches.
 #' lists with corresponding names ("w_baseline", "w_shift", "w_image") containing weights as arrays.
 #' @export
 fit_ontram <- function(model, history = FALSE, x_train = NULL,
@@ -49,7 +49,7 @@ fit_ontram <- function(model, history = FALSE, x_train = NULL,
                        min_delta = 0, stop_train = FALSE,
                        save_best = FALSE, filepath = NULL,
                        warm_start = FALSE, weights = NULL,
-                       eval_batchwise = FALSE, bs = 10) {
+                       eval_batchwise = TRUE) {
   stopifnot(nrow(x_train) == nrow(y_train))
   stopifnot(ncol(y_train) == model$y_dim)
   if (early_stopping) {
@@ -71,6 +71,7 @@ fit_ontram <- function(model, history = FALSE, x_train = NULL,
   apply_gradient_tf <- tf_function(apply_gradient)
 
   n <- nrow(y_train)
+  n_test <- nrow(y_test)
   start_time <- Sys.time()
   message("Training ordinal transformation model neural network.")
   message(paste0("Training samples: ", nrow(y_train)))
@@ -84,6 +85,9 @@ fit_ontram <- function(model, history = FALSE, x_train = NULL,
     }
     class(model_history) <- "ontram_history"
     hist_idxs <- sample(rep(seq_len(10), ceiling(n/10)), n)
+    if (eval_batchwise) {
+      hist_idxs_test <- sample(rep(seq_len(bs), ceiling(n_test/bs)), n_test)
+    }
   }
   early_stop <- FALSE
   if (early_stopping) {
@@ -139,24 +143,24 @@ fit_ontram <- function(model, history = FALSE, x_train = NULL,
       if (eval_batchwise) {
         tmp_pred_test <- c()
         for (hist_bat in seq_len(bs)) {
-          hist_idx <- which(hist_idxs == hist_bat)
-          y_hist_test <- tf$constant(.batch_subset(y_test, hist_idx, dim(y_test)),
+          hist_idx_test <- which(hist_idxs_test == hist_bat)
+          y_hist_test <- tf$constant(.batch_subset(y_test, hist_idx_test, dim(y_test)),
                                      dtype = "float32")
           if (!is.null(x_test)) {
-            x_hist_test <- tf$constant(.batch_subset(x_test, hist_idx, dim(x_test)),
+            x_hist_test <- tf$constant(.batch_subset(x_test, hist_idx_test, dim(x_test)),
                                        dtype = "float32")
           } else {
             x_hist_test <- NULL
           }
           if (!is.null(img_test)) {
-            img_hist_test <- tf$constant(.batch_subset(img_test, hist_idx, dim(img_test)),
+            img_hist_test <- tf$constant(.batch_subset(img_test, hist_idx_test, dim(img_test)),
                                          dtype = "float32")
           } else {
             img_hist_test <- NULL
           }
           tmp_pred_test <- append(tmp_pred_test,
                                   predict(model, x = x_hist_test,
-                                  y = y_hist_test, im = img_hist_test)$negLogLik)
+                                          y = y_hist_test, im = img_hist_test)$negLogLik)
         }
       }
       train_loss <- mean(tmp_pred)
@@ -175,7 +179,7 @@ fit_ontram <- function(model, history = FALSE, x_train = NULL,
               model_history$epoch_best <- epo
             }
             if (save_best) {
-            save_model_ontram(model, filename = paste0(filepath, "best_model"))
+            save_model_ontram(model, filename = paste0(filepath, "best_model.h5"))
             } else {
               m_best <- model
             }
@@ -192,7 +196,7 @@ fit_ontram <- function(model, history = FALSE, x_train = NULL,
     }
     if (early_stop) {
       if (save_best) {
-        m_best <- load_model_ontram(model, filename = paste0(filepath, "best_model"))
+        m_best <- load_model_ontram(model, filename = paste0(filepath, "best_model.h5"))
       }
       if (stop_train) {
         message("Early stopping")

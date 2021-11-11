@@ -52,7 +52,7 @@ fit_ontram(
 
 \item{eval_batchwise}{logical.}
 
-\item{bs}{batch size.
+\item{bs}{number of batches.
 lists with corresponding names ("w_baseline", "w_shift", "w_image") containing weights as arrays.}
 }
 \description{
