@@ -20,7 +20,9 @@ fit_ontram(
   save_best = FALSE,
   filepath = NULL,
   warm_start = FALSE,
-  weights = NULL
+  weights = NULL,
+  eval_batchwise = FALSE,
+  bs = 10
 )
 }
 \arguments{
@@ -46,7 +48,11 @@ fit_ontram(
 
 \item{warm_start}{logical. Whether initial weights should be non-random.}
 
-\item{weights}{output output of \code{\link{get_weights_ontram}} or list of similar structure;
+\item{weights}{output output of \code{\link{get_weights_ontram}} or list of similar structure;}
+
+\item{eval_batchwise}{logical.}
+
+\item{bs}{batch size.
 lists with corresponding names ("w_baseline", "w_shift", "w_image") containing weights as arrays.}
 }
 \description{
