@@ -21,8 +21,7 @@ fit_ontram(
   filepath = NULL,
   warm_start = FALSE,
   weights = NULL,
-  eval_batchwise = FALSE,
-  bs = 10
+  eval_batchwise = TRUE
 )
 }
 \arguments{
