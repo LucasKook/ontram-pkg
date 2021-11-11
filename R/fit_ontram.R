@@ -38,6 +38,8 @@
 #' @param filepath path where to save best model if \code{save_best = TRUE}.
 #' @param warm_start logical. Whether initial weights should be non-random.
 #' @param weights output output of \code{\link{get_weights_ontram}} or list of similar structure;
+#' @param eval_batchwise logical.
+#' @param bs batch size.
 #' lists with corresponding names ("w_baseline", "w_shift", "w_image") containing weights as arrays.
 #' @export
 fit_ontram <- function(model, history = FALSE, x_train = NULL,
@@ -46,7 +48,8 @@ fit_ontram <- function(model, history = FALSE, x_train = NULL,
                        early_stopping = FALSE, patience = 1,
                        min_delta = 0, stop_train = FALSE,
                        save_best = FALSE, filepath = NULL,
-                       warm_start = FALSE, weights = NULL) {
+                       warm_start = FALSE, weights = NULL,
+                       eval_batchwise = FALSE, bs = 10) {
   stopifnot(nrow(x_train) == nrow(y_train))
   stopifnot(ncol(y_train) == model$y_dim)
   if (early_stopping) {
@@ -133,8 +136,35 @@ fit_ontram <- function(model, history = FALSE, x_train = NULL,
                            predict(model, x = x_hist,
                                    y = y_hist, im = img_hist)$negLogLik)
       }
+      if (eval_batchwise) {
+        tmp_pred_test <- c()
+        for (hist_bat in seq_len(bs)) {
+          hist_idx <- which(hist_idxs == hist_bat)
+          y_hist_test <- tf$constant(.batch_subset(y_test, hist_idx, dim(y_test)),
+                                     dtype = "float32")
+          if (!is.null(x_test)) {
+            x_hist_test <- tf$constant(.batch_subset(x_test, hist_idx, dim(x_test)),
+                                       dtype = "float32")
+          } else {
+            x_hist_test <- NULL
+          }
+          if (!is.null(img_test)) {
+            img_hist_test <- tf$constant(.batch_subset(img_test, hist_idx, dim(img_test)),
+                                         dtype = "float32")
+          } else {
+            img_hist_test <- NULL
+          }
+          tmp_pred_test <- append(tmp_pred_test,
+                                  predict(model, x = x_hist_test,
+                                  y = y_hist_test, im = img_hist_test)$negLogLik)
+        }
+      }
       train_loss <- mean(tmp_pred)
-      test_loss <- predict(model, x = x_test, y = y_test, im = img_test)$negLogLik
+      if (eval_batchwise) {
+        test_loss <- mean(tmp_pred_test)
+      } else {
+        test_loss <- predict(model, x = x_test, y = y_test, im = img_test)$negLogLik
+      }
       model_history$train_loss <- append(model_history$train_loss, train_loss)
       model_history$test_loss <- append(model_history$test_loss, test_loss)
       if (early_stopping) {
