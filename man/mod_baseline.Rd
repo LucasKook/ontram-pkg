@@ -4,7 +4,7 @@
 \alias{mod_baseline}
 \title{Sequential model for the intercept function}
 \usage{
-mod_baseline(y_dim)
+mod_baseline(y_dim, ...)
 }
 \value{
 Returns a model of type \code{\link[keras]{keras_mod_sequential}}

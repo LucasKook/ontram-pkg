@@ -12,6 +12,20 @@ gtt <- function(gammas) {
   return(ret)
 }
 
+#' @examples
+#' mbl <- mod_baseline(7L, name = "baseline")
+#' msh <- mod_shift(2L, name = "shift")
+#' mim <- mod_shift(2L, name = "img")
+#' m <- keras_model(input = list(mbl$input, msh$input, mim$input),
+#'     output = layer_concatenate(list(mbl$output, msh$output, mim$output)))
+#' y <- matrix(c(0, 1, 0, 0, 0, 0, 0), ncol = 7, nrow = 10, byrow = TRUE)
+#' inp <- list(matrix(1, nrow = 10), matrix(1:2, ncol = 2, nrow = 10), matrix(1:2, ncol = 2, nrow = 10))
+#' m(inp)
+#' loss <- ontram_logLik(7L)
+#' compile(m, loss = loss, optimizer = "adam")
+#' loss(k_constant(y), m$output)
+#' loss(k_constant(y), m(inp))
+#' fit(m, x = inp, y = y, batch_size = 10, epochs = 10)
 #' @export
 ontram_logLik <- function(y_dim) {
   ret <- function(y_true, y_pred) {
@@ -36,6 +50,20 @@ ontram_logLik <- function(y_dim) {
   return(ret)
 }
 
+#' @examples
+#' mbl <- mod_baseline(7L, name = "baseline")
+#' msh <- mod_shift(2L, name = "shift")
+#' mim <- mod_shift(2L, name = "img")
+#' m <- keras_model(input = list(mbl$input, msh$input, mim$input),
+#'     output = layer_concatenate(list(mbl$output, msh$output, mim$output)))
+#' y <- matrix(c(0, 1, 0, 0, 0, 0, 0), ncol = 7, nrow = 10, byrow = TRUE)
+#' inp <- list(matrix(1, nrow = 10), matrix(1:2, ncol = 2, nrow = 10), matrix(1:2, ncol = 2, nrow = 10))
+#' m(inp)
+#' loss <- softmax_like(7L)
+#' compile(m, loss = loss, optimizer = "adam")
+#' loss(k_constant(y), m$output)
+#' loss(k_constant(y), m(inp))
+#' fit(m, x = inp, y = y, batch_size = 10, epochs = 10)
 #' @export
 softmax_like <- function(y_dim) {
   ret <- function(y_true, y_pred) {
