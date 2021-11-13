@@ -13,6 +13,7 @@ fit_ontram(
   x_test = NULL,
   y_test = NULL,
   img_test = NULL,
+  verbose = FALSE,
   early_stopping = FALSE,
   patience = 1,
   min_delta = 0,
@@ -21,7 +22,11 @@ fit_ontram(
   filepath = NULL,
   warm_start = FALSE,
   weights = NULL,
-  eval_batchwise = TRUE
+  eval_batchwise = TRUE,
+  img_augmentation = FALSE,
+  aug_params = list(horizontal_flip = TRUE, vertical_flip = TRUE, zoom_range = c(0.7,
+    1.4), rotation_range = 30, width_shift_range = 0.15, height_shift_range = 0.15,
+    fill_mode = "nearest")
 )
 }
 \arguments{
@@ -32,6 +37,8 @@ fit_ontram(
 \item{x_train, y_train, img_train}{data used for training the model.}
 
 \item{x_test, y_test, img_test}{data used for evaluating the model.}
+
+\item{verbose}{logical. Whether to print current training loss when \code{history = TRUE}).}
 
 \item{early_stopping}{logical. Whether to use early stopping (requires \code{history = TRUE}).}
 
@@ -51,8 +58,9 @@ fit_ontram(
 
 \item{eval_batchwise}{logical.}
 
-\item{bs}{number of batches.
-lists with corresponding names ("w_baseline", "w_shift", "w_image") containing weights as arrays.}
+\item{img_augmentation}{logical. Whether to augment training images.}
+
+\item{aug_params}{list with arguments used for \code{\link[keras]{image_data_generator}}.}
 }
 \description{
 Function for estimating the model
