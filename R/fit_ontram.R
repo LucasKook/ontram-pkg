@@ -116,8 +116,7 @@ fit_ontram <- function(model, history = FALSE, x_train = NULL,
         img_3d <- TRUE
         img_train <- img_train[, , , , ]
       }
-      img_generator <- image_data_generator(aug_params)
-      img_generator$fit(img_train)
+      img_generator <- do.call(image_data_generator, aug_params)
       aug_it <- flow_images_from_data(img_train,
                                       generator = img_generator,
                                       shuffle = FALSE,
