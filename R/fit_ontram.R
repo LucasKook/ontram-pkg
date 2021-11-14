@@ -55,7 +55,7 @@ fit_ontram <- function(model, history = FALSE, x_train = NULL,
                        img_augmentation = FALSE,
                        aug_params = list(horizontal_flip = TRUE,
                                          vertical_flip = TRUE,
-                                         zoom_range = c(0.7, 1.4),
+                                         zoom_range = 0.2,
                                          rotation_range = 30,
                                          width_shift_range = 0.15,
                                          height_shift_range = 0.15,
@@ -124,10 +124,10 @@ fit_ontram <- function(model, history = FALSE, x_train = NULL,
       img_train <- generator_next(aug_it)
       if (img_3d) {
         img_train <- array_reshape(img_train, c(dim(img_train)[1],
-                                              dim(img_train)[2],
-                                              dim(img_train)[3],
-                                              dim(img_train)[4],
-                                              1))
+                                                dim(img_train)[2],
+                                                dim(img_train)[3],
+                                                dim(img_train)[4],
+                                                1))
       }
     }
     for (bat in seq_len(bs)) {

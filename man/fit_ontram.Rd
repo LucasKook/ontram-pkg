@@ -24,9 +24,9 @@ fit_ontram(
   weights = NULL,
   eval_batchwise = TRUE,
   img_augmentation = FALSE,
-  aug_params = list(horizontal_flip = TRUE, vertical_flip = TRUE, zoom_range = c(0.7,
-    1.4), rotation_range = 30, width_shift_range = 0.15, height_shift_range = 0.15,
-    fill_mode = "nearest")
+  aug_params = list(horizontal_flip = TRUE, vertical_flip = TRUE, zoom_range = 0.2,
+    rotation_range = 30, width_shift_range = 0.15, height_shift_range = 0.15, fill_mode =
+    "nearest")
 )
 }
 \arguments{
