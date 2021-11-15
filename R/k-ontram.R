@@ -1,9 +1,9 @@
 #' Keras interface to ONTRAMs
 #' @examples
 #' library(tram)
-#' mbl <- k_mod_baseline(5L)
-#' msh <- mod_shift(2L)
-#' mim <- mod_shift(1L)
+#' mbl <- k_mod_baseline(5L, name = "baseline")
+#' msh <- mod_shift(2L, name = "linear_shift")
+#' mim <- mod_shift(1L, name = "complex_shift")
 #' m <- k_ontram(mbl, list(msh, mim))
 #'
 #' data("wine", package = "ordinal")
@@ -15,8 +15,9 @@
 #'
 #' m(list(INT, X, Z))
 #' loss <- k_ontram_loss(ncol(Y))
-#' compile(m, loss = loss, optimizer = optimizer_adam(lr = 1e-3))
-#' fit(m, x = list(INT, X, Z), y = Y, batch_size = nrow(wine), epoch = 100L)
+#' compile(m, loss = loss, optimizer = optimizer_adam(lr = 1e-2, decay = 0.001))
+#' fit(m, x = list(INT, X, Z), y = Y, batch_size = nrow(wine), epoch = 24000L,
+#'     view_metrics = FALSE)
 #'
 #' idx <- 8
 #' loss(Y[idx, , drop = FALSE], m(list(INT[idx, , drop = FALSE],
@@ -73,6 +74,8 @@ k_ontram_loss <- function(K) {
 }
 
 #' Layer for transforming raw intercepts
+#' @examples
+#' layer_trafo_intercept()
 #' @export
 layer_trafo_intercept <- tf$keras$layers$Lambda(
   function(x) {
