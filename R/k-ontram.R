@@ -16,15 +16,15 @@
 #' m(list(INT, X, Z))
 #' loss <- k_ontram_loss(ncol(Y))
 #' compile(m, loss = loss, optimizer = optimizer_adam(lr = 1e-2, decay = 0.001))
-#' fit(m, x = list(INT, X, Z), y = Y, batch_size = nrow(wine), epoch = 24000L,
+#' fit(m, x = list(INT, X, Z), y = Y, batch_size = nrow(wine), epoch = 10,
 #'     view_metrics = FALSE)
 #'
 #' idx <- 8
 #' loss(Y[idx, , drop = FALSE], m(list(INT[idx, , drop = FALSE],
 #'      X[idx, , drop = FALSE], Z[idx, , drop = FALSE])))
-#' logLik(tm, newdata = wine[idx,])
 #'
 #' tm <- Polr(rating ~ temp + contact + noise, data = wine)
+#' logLik(tm, newdata = wine[idx,])
 #'
 #' tmp <- get_weights(m)
 #' tmp[[1]][] <- .to_gamma(coef(as.mlt(tm))[1:4])
@@ -41,11 +41,18 @@ k_ontram <- function(
   list_of_shift_models,
   ...
 ) {
-  inputs <- list(mod_baseline$input,
-                 lapply(list_of_shift_models, function(x) x$input))
-  outputs <- list(mod_baseline$output,
-                  lapply(list_of_shift_models, function(x) x$output) %>%
-                    layer_add())
+  nshift <- length(list_of_shift_models)
+
+  if (nshift == 1L) {
+    shift_in <- list_of_shift_models$input
+    shift_out <- list_of_shift_models$output
+  } else if (nshift >= 2L) {
+    shift_in <- lapply(list_of_shift_models, function(x) x$input)
+    shift_out <- lapply(list_of_shift_models, function(x) x$output) %>%
+      layer_add()
+  }
+  inputs <- list(mod_baseline$input, shift_in)
+  outputs <- list(mod_baseline$output, shift_out)
   keras_model(inputs = inputs, outputs = layer_concatenate(outputs))
 }
 
