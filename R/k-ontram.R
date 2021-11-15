@@ -32,7 +32,7 @@
 #' set_weights(m, tmp)
 #'
 #' loss(k_constant(Y), m(list(INT, X, Z)))
-#' - logLik(tm) / nrow(Y)
+#' - logLik(tm)
 #'
 #' @export
 k_ontram <- function(
@@ -68,7 +68,7 @@ k_ontram_loss <- function(K) {
     tK <- y_true[, K, drop = TRUE]
     lik <- t1 * k_sigmoid(upr) + tK * (1 - k_sigmoid(lwr)) +
       (1 - t1) * (1 - tK) * (k_sigmoid(upr) - k_sigmoid(lwr))
-    - k_mean(k_log(lik))
+    - k_sum(k_log(lik))
   }
 }
 
