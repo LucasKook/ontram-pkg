@@ -53,7 +53,9 @@ k_ontram <- function(
   }
   inputs <- list(mod_baseline$input, shift_in)
   outputs <- list(mod_baseline$output, shift_out)
-  keras_model(inputs = inputs, outputs = layer_concatenate(outputs))
+  m <- keras_model(inputs = inputs, outputs = layer_concatenate(outputs))
+  class(m) <- c("k_ontram", class(m))
+  return(m)
 }
 
 #' Another keras implementation of the ontram loss
@@ -102,4 +104,30 @@ k_mod_baseline <- function(K, ...) {
     layer_dense(units = K - 1L, input_shape = 1L, use_bias = FALSE,
                 ... = ...) %>%
     layer_trafo_intercept()
+}
+
+#' S3 methods for \code{k_ontram}
+#' @method predict k_ontram
+#' @export
+predict.k_ontram <- function(object, x,
+                             type = c("distribution", "density", "trafo",
+                                      "baseline_only"),
+                             ...) {
+  type <- match.arg(type)
+  class(object) <- class(object)[-1L]
+  preds <- predict(object, x = x, ... = ...)
+  K <- ncol(preds)
+  baseline <- preds[, 1L:(K - 1L)]
+  shift <- do.call("cbind", lapply(1L:(K - 1L), function(x) preds[, K]))
+  trafo <- baseline - shift
+  cdf <- cbind(plogis(trafo), 1)
+  pdf <- apply(cdf, 1, diff)
+
+  ret <- switch(type,
+                "distribution" = cdf,
+                "density" = pdf,
+                "trafo" = trafo,
+                "baseline_only" = baseline)
+
+  return(ret)
 }

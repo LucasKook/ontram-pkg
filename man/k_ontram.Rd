@@ -26,15 +26,15 @@ INT <- matrix(1, nrow = nrow(wine))
 m(list(INT, X, Z))
 loss <- k_ontram_loss(ncol(Y))
 compile(m, loss = loss, optimizer = optimizer_adam(lr = 1e-2, decay = 0.001))
-fit(m, x = list(INT, X, Z), y = Y, batch_size = nrow(wine), epoch = 24000L,
+fit(m, x = list(INT, X, Z), y = Y, batch_size = nrow(wine), epoch = 10,
     view_metrics = FALSE)
 
 idx <- 8
 loss(Y[idx, , drop = FALSE], m(list(INT[idx, , drop = FALSE],
      X[idx, , drop = FALSE], Z[idx, , drop = FALSE])))
-logLik(tm, newdata = wine[idx,])
 
 tm <- Polr(rating ~ temp + contact + noise, data = wine)
+logLik(tm, newdata = wine[idx,])
 
 tmp <- get_weights(m)
 tmp[[1]][] <- .to_gamma(coef(as.mlt(tm))[1:4])
