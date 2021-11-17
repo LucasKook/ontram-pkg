@@ -114,20 +114,23 @@ fit_ontram <- function(model, history = FALSE, x_train = NULL,
       img_3d <- FALSE
       if (length(dim(img_train)) > 4) {
         img_3d <- TRUE
-        img_train <- img_train[, , , , ]
+        img_train_aug <- img_train[, , , , ]
+      } else {
+        img_train_aug <- img_train
       }
       img_generator <- do.call(image_data_generator, aug_params)
-      aug_it <- flow_images_from_data(img_train,
+      aug_it <- flow_images_from_data(img_train_aug,
                                       generator = img_generator,
                                       shuffle = FALSE,
                                       batch_size = n)
-      img_train <- generator_next(aug_it)
+      img_train_aug <- generator_next(aug_it)
       if (img_3d) {
-        img_train <- array_reshape(img_train, c(dim(img_train)[1],
-                                                dim(img_train)[2],
-                                                dim(img_train)[3],
-                                                dim(img_train)[4],
-                                                1))
+        img_train_aug <- array_reshape(img_train_aug,
+                                       c(dim(img_train)[1],
+                                         dim(img_train)[2],
+                                         dim(img_train)[3],
+                                         dim(img_train)[4],
+                                         1))
       }
     }
     for (bat in seq_len(bs)) {
@@ -141,8 +144,13 @@ fit_ontram <- function(model, history = FALSE, x_train = NULL,
         x_batch <- NULL
       }
       if (!is.null(img_train)) {
-        img_batch <- tf$constant(.batch_subset(img_train, idx, dim(img_train)),
+        if (img_augmentation) {
+          img_batch <- tf$constant(.batch_subset(img_train_aug, idx, dim(img_train_aug)),
+                                   dtype = "float32")
+        } else {
+          img_batch <- tf$constant(.batch_subset(img_train, idx, dim(img_train)),
                                  dtype = "float32")
+        }
       } else {
         img_batch <- NULL
       }
@@ -162,8 +170,13 @@ fit_ontram <- function(model, history = FALSE, x_train = NULL,
           x_hist <- NULL
         }
         if (!is.null(img_train)) {
-          img_hist <- tf$constant(.batch_subset(img_train, hist_idx, dim(img_train)),
-                                  dtype = "float32")
+          if (img_augmentation) {
+            img_hist <- tf$constant(.batch_subset(img_train_aug, hist_idx, dim(img_train_aug)),
+                                     dtype = "float32")
+          } else {
+            img_hist <- tf$constant(.batch_subset(img_train, hist_idx, dim(img_train)),
+                                    dtype = "float32")
+          }
         } else {
           img_hist <- NULL
         }
