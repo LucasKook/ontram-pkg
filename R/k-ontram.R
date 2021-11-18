@@ -70,8 +70,8 @@ k_ontram_loss <- function(K) {
   function(y_true, y_pred) {
     intercepts <- y_pred[, 1L:(K - 1L), drop = TRUE]
     shifts <- y_pred[, K, drop = TRUE]
-    yu <- deepregression::tf_stride_cols(y_true, 1L, K - 1L)
-    yl <- deepregression::tf_stride_cols(y_true, 2L, K)
+    yu <- y_true[, 1L:(K - 1L), drop = FALSE]
+    yl <- y_true[, 2L:K, drop = FALSE]
     upr <- k_sum(tf$multiply(yu, intercepts), axis = 0L) - shifts
     lwr <- k_sum(tf$multiply(yl, intercepts), axis = 0L) - shifts
     t1 <- y_true[, 1L, drop = TRUE]
@@ -111,7 +111,8 @@ k_mod_baseline <- function(K, ...) {
 #' @export
 predict.k_ontram <- function(object, x,
                              type = c("distribution", "density", "trafo",
-                                      "baseline_only"),
+                                      "baseline_only", "hazard", "cumhazard",
+                                      "survivor", "odds"),
                              ...) {
   type <- match.arg(type)
   class(object) <- class(object)[-1L]
@@ -122,12 +123,20 @@ predict.k_ontram <- function(object, x,
   trafo <- baseline - shift
   cdf <- cbind(plogis(trafo), 1)
   pdf <- apply(cdf, 1, diff)
+  surv <- 1 - cdf
+  haz <- pdf / surv
+  cumhaz <-  - log(surv)
+  odds <- cdf / (1 - cdf)
 
   ret <- switch(type,
                 "distribution" = cdf,
                 "density" = pdf,
                 "trafo" = trafo,
-                "baseline_only" = baseline)
+                "baseline_only" = baseline,
+                "hazard" = haz,
+                "cumhazard" = cumhaz,
+                "survivor" = surv,
+                "odds" = odds)
 
   return(ret)
 }
