@@ -30,6 +30,7 @@
 #' @param history logical. If TRUE train and test loss are returned as a list.
 #' @param x_train,y_train,img_train data used for training the model.
 #' @param x_test,y_test,img_test data used for evaluating the model.
+#' @param verbose logical. Whether to print current training loss when \code{history = TRUE}).
 #' @param early_stopping logical. Whether to use early stopping (requires \code{history = TRUE}).
 #' @param patience number of epochs with no improvement after which training will be stopped.
 #' @param min_delta minimum increase in test loss considered as no improvement.
@@ -38,15 +39,27 @@
 #' @param filepath path where to save best model if \code{save_best = TRUE}.
 #' @param warm_start logical. Whether initial weights should be non-random.
 #' @param weights output output of \code{\link{get_weights_ontram}} or list of similar structure;
-#' lists with corresponding names ("w_baseline", "w_shift", "w_image") containing weights as arrays.
+#' @param eval_batchwise logical.
+#' @param img_augmentation logical. Whether to augment training images.
+#' @param aug_params list with arguments used for \code{\link[keras]{image_data_generator}}.
 #' @export
 fit_ontram <- function(model, history = FALSE, x_train = NULL,
                        y_train, img_train = NULL,
                        x_test = NULL, y_test = NULL, img_test = NULL,
+                       verbose = FALSE,
                        early_stopping = FALSE, patience = 1,
                        min_delta = 0, stop_train = FALSE,
                        save_best = FALSE, filepath = NULL,
-                       warm_start = FALSE, weights = NULL) {
+                       warm_start = FALSE, weights = NULL,
+                       eval_batchwise = TRUE,
+                       img_augmentation = FALSE,
+                       aug_params = list(horizontal_flip = TRUE,
+                                         vertical_flip = TRUE,
+                                         zoom_range = 0.2,
+                                         rotation_range = 30,
+                                         width_shift_range = 0.15,
+                                         height_shift_range = 0.15,
+                                         fill_mode = "nearest")) {
   stopifnot(nrow(x_train) == nrow(y_train))
   stopifnot(ncol(y_train) == model$y_dim)
   if (early_stopping) {
@@ -66,8 +79,8 @@ fit_ontram <- function(model, history = FALSE, x_train = NULL,
     }
   }
   apply_gradient_tf <- tf_function(apply_gradient)
-
   n <- nrow(y_train)
+  n_test <- nrow(y_test)
   start_time <- Sys.time()
   message("Training ordinal transformation model neural network.")
   message(paste0("Training samples: ", nrow(y_train)))
@@ -81,6 +94,9 @@ fit_ontram <- function(model, history = FALSE, x_train = NULL,
     }
     class(model_history) <- "ontram_history"
     hist_idxs <- sample(rep(seq_len(10), ceiling(n/10)), n)
+    if (eval_batchwise) {
+      hist_idxs_test <- sample(rep(seq_len(bs), ceiling(n_test/bs)), n_test)
+    }
   }
   early_stop <- FALSE
   if (early_stopping) {
@@ -90,8 +106,33 @@ fit_ontram <- function(model, history = FALSE, x_train = NULL,
     set_weights_ontram(model, weights = weights)
   }
   for (epo in seq_len(epo)) {
-    message(paste0("Training epoch: ", epo))
+    if (!verbose) {
+      message(paste0("Training epoch: ", epo))
+    }
     batch_idx <- sample(rep(seq_len(bs), ceiling(n/bs)), n)
+    if (img_augmentation) {
+      img_3d <- FALSE
+      if (length(dim(img_train)) > 4) {
+        img_3d <- TRUE
+        img_train_aug <- img_train[, , , , ]
+      } else {
+        img_train_aug <- img_train
+      }
+      img_generator <- do.call(image_data_generator, aug_params)
+      aug_it <- flow_images_from_data(img_train_aug,
+                                      generator = img_generator,
+                                      shuffle = FALSE,
+                                      batch_size = n)
+      img_train_aug <- generator_next(aug_it)
+      if (img_3d) {
+        img_train_aug <- array_reshape(img_train_aug,
+                                       c(dim(img_train)[1],
+                                         dim(img_train)[2],
+                                         dim(img_train)[3],
+                                         dim(img_train)[4],
+                                         1))
+      }
+    }
     for (bat in seq_len(bs)) {
       idx <- which(batch_idx == bat)
       y_batch <- tf$constant(.batch_subset(y_train, idx, dim(y_train)),
@@ -103,8 +144,13 @@ fit_ontram <- function(model, history = FALSE, x_train = NULL,
         x_batch <- NULL
       }
       if (!is.null(img_train)) {
-        img_batch <- tf$constant(.batch_subset(img_train, idx, dim(img_train)),
+        if (img_augmentation) {
+          img_batch <- tf$constant(.batch_subset(img_train_aug, idx, dim(img_train_aug)),
+                                   dtype = "float32")
+        } else {
+          img_batch <- tf$constant(.batch_subset(img_train, idx, dim(img_train)),
                                  dtype = "float32")
+        }
       } else {
         img_batch <- NULL
       }
@@ -124,8 +170,13 @@ fit_ontram <- function(model, history = FALSE, x_train = NULL,
           x_hist <- NULL
         }
         if (!is.null(img_train)) {
-          img_hist <- tf$constant(.batch_subset(img_train, hist_idx, dim(img_train)),
-                                  dtype = "float32")
+          if (img_augmentation) {
+            img_hist <- tf$constant(.batch_subset(img_train_aug, hist_idx, dim(img_train_aug)),
+                                     dtype = "float32")
+          } else {
+            img_hist <- tf$constant(.batch_subset(img_train, hist_idx, dim(img_train)),
+                                    dtype = "float32")
+          }
         } else {
           img_hist <- NULL
         }
@@ -133,8 +184,38 @@ fit_ontram <- function(model, history = FALSE, x_train = NULL,
                            predict(model, x = x_hist,
                                    y = y_hist, im = img_hist)$negLogLik)
       }
+      if (eval_batchwise) {
+        tmp_pred_test <- c()
+        for (hist_bat in seq_len(bs)) {
+          hist_idx_test <- which(hist_idxs_test == hist_bat)
+          y_hist_test <- tf$constant(.batch_subset(y_test, hist_idx_test, dim(y_test)),
+                                     dtype = "float32")
+          if (!is.null(x_test)) {
+            x_hist_test <- tf$constant(.batch_subset(x_test, hist_idx_test, dim(x_test)),
+                                       dtype = "float32")
+          } else {
+            x_hist_test <- NULL
+          }
+          if (!is.null(img_test)) {
+            img_hist_test <- tf$constant(.batch_subset(img_test, hist_idx_test, dim(img_test)),
+                                         dtype = "float32")
+          } else {
+            img_hist_test <- NULL
+          }
+          tmp_pred_test <- append(tmp_pred_test,
+                                  predict(model, x = x_hist_test,
+                                          y = y_hist_test, im = img_hist_test)$negLogLik)
+        }
+      }
       train_loss <- mean(tmp_pred)
-      test_loss <- predict(model, x = x_test, y = y_test, im = img_test)$negLogLik
+      if (verbose) {
+        message(paste0("Training epoch: ", epo, ", Training loss: ", format(round(train_loss, 5), nsmall = 5)))
+      }
+      if (eval_batchwise) {
+        test_loss <- mean(tmp_pred_test)
+      } else {
+        test_loss <- predict(model, x = x_test, y = y_test, im = img_test)$negLogLik
+      }
       model_history$train_loss <- append(model_history$train_loss, train_loss)
       model_history$test_loss <- append(model_history$test_loss, test_loss)
       if (early_stopping) {
@@ -145,7 +226,7 @@ fit_ontram <- function(model, history = FALSE, x_train = NULL,
               model_history$epoch_best <- epo
             }
             if (save_best) {
-            save_model_ontram(model, filename = paste0(filepath, "best_model"))
+            save_model_ontram(model, filename = paste0(filepath, "best_model.h5"))
             } else {
               m_best <- model
             }
@@ -162,7 +243,7 @@ fit_ontram <- function(model, history = FALSE, x_train = NULL,
     }
     if (early_stop) {
       if (save_best) {
-        m_best <- load_model_ontram(model, filename = paste0(filepath, "best_model"))
+        m_best <- load_model_ontram(filename = paste0(filepath, "best_model.h5"))
       }
       if (stop_train) {
         message("Early stopping")
