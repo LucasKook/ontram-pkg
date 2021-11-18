@@ -38,11 +38,16 @@
 #' @export
 k_ontram <- function(
   mod_baseline,
-  list_of_shift_models,
+  list_of_shift_models = NULL,
   ...
 ) {
+  if (is.null(list_of_shift_models)) {
+    list_of_shift_models <- keras_model_sequential() %>%
+      layer_dense(units = 1L, input_shape = c(1L),
+                  kernel_initializer = initializer_zeros(),
+                  trainable = FALSE)
+  }
   nshift <- length(list_of_shift_models)
-
   if (nshift == 1L) {
     shift_in <- list_of_shift_models$input
     shift_out <- list_of_shift_models$output
@@ -183,4 +188,43 @@ simulate.k_ontram <- function(object, x, nsim = 1, levels = NULL, seed = NULL) {
     ret <- ordered(ret, levels = levels)
   }
   return(ret)
+}
+
+
+warm_start.ontram <- function(model, tram, which = c("all", "baseline only", "shift only")) {
+  stopifnot(which %in% c("all", "baseline only", "shift only"))
+  K <- model$y_dim
+  x_dim <- model$x_dim
+  w <- vector(mode = "list", length = 2)
+  names(w) <- c("w_baseline", "w_shift")
+  w$w_baseline <- list(matrix(coef(tram, with_baseline = T)[1:K-1],
+                              nrow = 1, ncol = K-1))
+  if (!is.null(coef(tram))) {
+    w$w_shift <- list(matrix(coef(tram),
+                             nrow = x_dim, ncol = 1))
+  }
+  if (which %in% "baseline only") {
+    model$mod_baseline$set_weights(w$w_baseline)
+  }
+  if (which %in% "shift only") {
+    model$mod_shift$set_weights(w$w_shift)
+  }
+  if (which %in% "all") {
+    model$mod_baseline$set_weights(w$w_baseline)
+    model$mod_shift$set_weights(w$w_shift)
+  }
+  return(invisible(model))
+}
+
+warm_start.k_ontram <- function(object, tram, which = c("all", "baseline only", "shift only")) {
+  which <- match.arg(which)
+  w_old <- get_weights(object)
+  w_new <- vector(mode = "list", length = 2)
+  w_new$w_baseline <- list(matrix(coef(tram, with_baseline = T)[1:K-1],
+                                  nrow = 1, ncol = K-1))
+  if (!is.null(coef(tram))) {
+    w$w_shift <- list(matrix(coef(tram),
+                             nrow = x_dim, ncol = 1))
+  }
+
 }
