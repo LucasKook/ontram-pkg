@@ -27,7 +27,6 @@ fit(m, x = list(INT, X, Z), y = Y, batch_size = nrow(wine), epoch = 10,
     view_metrics = FALSE)
 
 tm <- Polr(rating ~ temp + contact + noise, data = wine)
-logLik(tm, newdata = wine[idx,])
 
 tmp <- get_weights(m)
 tmp[[1]][] <- .to_gamma(coef(as.mlt(tm))[1:4])
