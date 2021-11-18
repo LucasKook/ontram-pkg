@@ -121,12 +121,13 @@ predict.k_ontram <- function(object, x,
   baseline <- preds[, 1L:(K - 1L)]
   shift <- do.call("cbind", lapply(1L:(K - 1L), function(x) preds[, K]))
   trafo <- baseline - shift
-  cdf <- cbind(plogis(trafo), 1)
-  pdf <- apply(cdf, 1, diff)
-  surv <- 1 - cdf
-  haz <- pdf / surv
+  ccdf <- cbind(plogis(trafo), 1)
+  cdf <- cbind(0, ccdf)
+  pdf <- t(apply(cdf, 1, diff))
+  surv <- 1 - ccdf
+  haz <- pdf / (1 - ccdf)
   cumhaz <-  - log(surv)
-  odds <- cdf / (1 - cdf)
+  odds <- ccdf / (1 - ccdf)
 
   ret <- switch(type,
                 "distribution" = cdf,
