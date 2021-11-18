@@ -110,7 +110,7 @@ plot.ontram_history <- function(object, col_train = "blue", col_test = "red", ad
 #' fit_ontram(mo, x_train = x_train, y_train = y_train)
 #' simulate(mo, nsim = 1, x = x_valid, y = y_valid)
 #' @export
-simulate.ontram <- function(object, nsim = 1, seed = NULL, x = NULL, y, im = NULL, levels = 1:ncol(y), ...) {
+simulate.ontram <- function(object, nsim = 1, x = NULL, y, im = NULL, levels = 1:ncol(y), seed = NULL, ...) {
   if (!is.null(seed)) {
     set.seed(seed)
   }

@@ -126,7 +126,7 @@ predict.k_ontram <- function(object, x,
   pdf <- t(apply(cdf, 1, diff))
   surv <- 1 - ccdf
   haz <- pdf / (1 - ccdf)
-  cumhaz <-  - log(surv)
+  cumhaz <- - log(surv)
   odds <- ccdf / (1 - ccdf)
 
   ret <- switch(type,
@@ -139,5 +139,48 @@ predict.k_ontram <- function(object, x,
                 "survivor" = surv,
                 "odds" = odds)
 
+  return(ret)
+}
+
+#' Simulate Responses
+#' @method simulate k_ontram
+#' @param object an object of class \code{\link{k_ontram}}.
+#' @param x list of data matrices (including matrix containing 1 if model intercept is non-complex)
+#' @param nsim number of simulations.
+#' @param levels levels of simulated ordered responses.
+#' @param seed random seed.
+#' @examples
+#' data(wine, package = "ordinal")
+#' fm <- rating ~ temp + contact
+#' y <- model.matrix(~ 0 + rating, data = wine)
+#' x <- ontram:::.rm_int(model.matrix(fm, data = wine))
+#' loss <- k_ontram_loss(ncol(y))
+#'
+#' mbl <- k_mod_baseline(ncol(y), name = "baseline")
+#' msh <- mod_shift(ncol(x), name = "linear_shift")
+#'
+#' mo <- k_ontram(mbl, msh)
+#' compile(mo, optimizer = optimizer_adam(learning_rate = 10^-4), loss = loss)
+#' fit(mo, x = list(matrix(1, nrow = nrow(wine)), x), y = y, batch_size = nrow(wine), epoch = 10)
+#' simulate(mo, x = list(matrix(1, nrow = nrow(wine)), x), nsim = 1)
+#' @export
+simulate.k_ontram <- function(object, x, nsim = 1, levels = NULL, seed = NULL) {
+  if (!is.null(seed)) {
+    set.seed(seed)
+  }
+  pr <- predict(object, x = x, type = "density")
+  if (is.null(levels)) {
+    levels <- 1:ncol(pr)
+  }
+  ret <- apply(pr, 1, function(p) sample(levels, nsim, prob = p, replace = TRUE))
+  if (nsim > 1) {
+    tmp <- vector(mode = "list", length = nsim)
+    for (i in 1:nsim) {
+      tmp[[i]] <- ordered(ret[i, ], levels = levels)
+    }
+    ret <- tmp
+  } else {
+    ret <- ordered(ret, levels = levels)
+  }
   return(ret)
 }
