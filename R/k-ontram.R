@@ -86,13 +86,15 @@ k_ontram_loss <- function(K) {
 #' @examples
 #' layer_trafo_intercept()
 #' @export
-layer_trafo_intercept <- tf$keras$layers$Lambda(
-  function(x) {
-    w1 <- x[, 1L, drop = FALSE]
-    wrest <- tf$math$exp(x[, 2L:x$shape[[2]], drop = FALSE])
-    tf$cumsum(k_concatenate(list(w1, wrest), axis = 0L), axis = 1L)
-  }
-)
+layer_trafo_intercept <- function() {
+  tf$keras$layers$Lambda(
+    function(x) {
+      w1 <- x[, 1L, drop = FALSE]
+      wrest <- tf$math$exp(x[, 2L:x$shape[[2]], drop = FALSE])
+      tf$cumsum(k_concatenate(list(w1, wrest), axis = 0L), axis = 1L)
+    }
+  )
+}
 
 #' keras mbl
 #' @examples
@@ -103,7 +105,7 @@ k_mod_baseline <- function(K, ...) {
   keras_model_sequential() %>%
     layer_dense(units = K - 1L, input_shape = 1L, use_bias = FALSE,
                 ... = ...) %>%
-    layer_trafo_intercept()
+    layer_trafo_intercept()()
 }
 
 #' S3 methods for \code{k_ontram}

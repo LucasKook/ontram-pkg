@@ -4,7 +4,7 @@
 \alias{layer_trafo_intercept}
 \title{Layer for transforming raw intercepts}
 \usage{
-layer_trafo_intercept(object, ...)
+layer_trafo_intercept()
 }
 \description{
 Layer for transforming raw intercepts
