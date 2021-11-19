@@ -16,9 +16,9 @@ msh <- mod_shift(2L, name = "linear_shift")
 mim <- mod_shift(1L, name = "complex_shift")
 m <- k_ontram(mbl, list(msh, mim))
 
-X <- .rm_int(model.matrix(~ temp + contact, data = wine))
+X <- ontram:::.rm_int(model.matrix(~ temp + contact, data = wine))
 Y <- model.matrix(~ 0 + rating, data = wine)
-Z <- .rm_int(model.matrix(~ noise, data = wine))
+Z <- ontram:::.rm_int(model.matrix(~ noise, data = wine))
 INT <- matrix(1, nrow = nrow(wine))
 
 loss <- k_ontram_loss(ncol(Y))
