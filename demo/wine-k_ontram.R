@@ -37,5 +37,4 @@ set_weights(m, tmp)
 loss(k_constant(Y), m(list(INT, X, Z)))
 - logLik(tm)
 
-debugonce(predict.k_ontram)
 predict(m, list(INT, X, Z), type = "cumhaz")
