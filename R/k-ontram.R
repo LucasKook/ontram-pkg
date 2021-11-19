@@ -89,8 +89,8 @@ k_ontram_loss <- function(K) {
 layer_trafo_intercept <- function() {
   tf$keras$layers$Lambda(
     function(x) {
-      w1 <- tf_stride_cols(x, 1L)
-      wrest <- tf$math$exp(tf_stride_cols(x, 2L, x$shape[[2]]))
+      w1 <- x[, 1L, drop = FALSE]
+      wrest <- tf$math$exp(x[, 2L:x$shape[[2]], drop = FALSE])
       tf$cumsum(k_concatenate(list(w1, wrest), axis = 0L), axis = 1L)
     }
   )
@@ -142,14 +142,4 @@ predict.k_ontram <- function(object, x,
                 "odds" = odds)
 
   return(ret)
-}
-
-#' Stride cols
-#' @export
-tf_stride_cols <- function(A, start, end = NULL) {
-  # Taken from {deepregression}
-  stopifnot(start <= end)
-  if (is.null(end))
-    end <- start
-  (tf$keras$layers$Lambda(function(x) x[, as.integer(start):as.integer(end)]))(A)
 }
