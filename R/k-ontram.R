@@ -63,6 +63,11 @@ k_ontram <- function(
   return(m)
 }
 
+# > for (layer in mo$layers) {
+#   +     print(layer$get_weights())
+#   +     print(layer$input$name)
+#   + }
+
 #' Another keras implementation of the ontram loss
 #' @examples
 #' y_true <- k_constant(matrix(c(1, 0, 0, 0, 0), nrow = 1L))
@@ -192,41 +197,77 @@ simulate.k_ontram <- function(object, x, nsim = 1, levels = NULL, seed = NULL) {
   return(ret)
 }
 
-
-warm_start.ontram <- function(model, tram, which = c("all", "baseline only", "shift only")) {
-  stopifnot(which %in% c("all", "baseline only", "shift only"))
-  K <- model$y_dim
-  x_dim <- model$x_dim
-  w <- vector(mode = "list", length = 2)
-  names(w) <- c("w_baseline", "w_shift")
-  w$w_baseline <- list(matrix(coef(tram, with_baseline = T)[1:K-1],
-                              nrow = 1, ncol = K-1))
-  if (!is.null(coef(tram))) {
-    w$w_shift <- list(matrix(coef(tram),
-                             nrow = x_dim, ncol = 1))
-  }
-  if (which %in% "baseline only") {
-    model$mod_baseline$set_weights(w$w_baseline)
-  }
-  if (which %in% "shift only") {
-    model$mod_shift$set_weights(w$w_shift)
-  }
-  if (which %in% "all") {
-    model$mod_baseline$set_weights(w$w_baseline)
-    model$mod_shift$set_weights(w$w_shift)
-  }
-  return(invisible(model))
-}
-
-warm_start.k_ontram <- function(object, tram, which = c("all", "baseline only", "shift only")) {
+#' Set initial weights
+#' @method warmstart k_ontram
+#' @param object an object of class \code{\link{k_ontram}}.
+#' @param object_w an object of class \code{\link[tram]{Polr}} from which model weights are taken.
+#' @examples
+#' library(tram)
+#' set.seed(2021)
+#' data(wine, package = "ordinal")
+#' wine$noise <- rnorm(nrow(wine))
+#' y <- model.matrix(~ 0 + rating, data = wine)
+#' x <- ontram:::.rm_int(model.matrix(rating ~ temp + contact, data = wine))
+#' im <- ontram:::.rm_int(model.matrix(rating ~ noise, data = wine))
+#' loss <- k_ontram_loss(ncol(y))
+#' mod_polr <- Polr(fm, data = wine)
+#' mbl <- k_mod_baseline(ncol(y), name = "baseline")
+#' msh <- mod_shift(ncol(x), name = "shift")
+#' mim <- keras_model_sequential() %>%
+#' layer_dense(units = 8, input_shape = 1L, activation = "relu") %>%
+#'   layer_dense(units = 16, activation = "relu") %>%
+#'   layer_dense(units = 1, use_bias = FALSE)
+#' mo <- k_ontram(mbl, list(msh, mim))
+#' compile(mo, loss = loss)
+#' fit(mo, x = list(matrix(1, nrow = nrow(wine)), x, im), y = y, batch_size = 10, epoch = 20)
+#' warmstart(mo, mod_polr, which = "shift only")
+#' @export
+warmstart.k_ontram <- function(object, object_w, which = c("all", "baseline only", "shift only")) {
+  stopifnot("Polr" %in% class(object_w))
   which <- match.arg(which)
-  w_old <- get_weights(object)
-  w_new <- vector(mode = "list", length = 2)
-  w_new$w_baseline <- list(matrix(coef(tram, with_baseline = T)[1:K-1],
-                                  nrow = 1, ncol = K-1))
-  if (!is.null(coef(tram))) {
-    w$w_shift <- list(matrix(coef(tram),
-                             nrow = x_dim, ncol = 1))
+  K <- object$output_shape[[2]]
+  n_layers <- length(object$get_weights())
+  w_new <- get_weights(object)
+  if (which == "all") {
+    w_new[[1]] <- matrix(ontram:::.to_gamma(coef(object_w, with_baseline = T)[1:K-1]),
+                         nrow = 1, ncol = K-1)
+    if (!is.null(coef(object_w))) {
+      for (idx in 2:n_layers) { # not optimal
+        if (ncol(w_new[[idx]]) == 1 && nrow(w_new[[idx]]) == length(coef(object_w))) {
+          w_new[[idx]] <- matrix(coef(object_w),
+                                 nrow = length(coef(object_w)), ncol = 1)
+        }
+      }
+    }
+  } else if (which == "baseline only") {
+    w_new[[1]] <- matrix(ontram:::.to_gamma(coef(object_w, with_baseline = T)[1:K-1]),
+                         nrow = 1, ncol = K-1)
   }
-
+  else if (which == "shift only") {
+    for (idx in 2:n_layers) {
+      if (ncol(w_new[[idx]]) == 1 && nrow(w_new[[idx]]) == length(coef(object_w))) {
+        w_new[[idx]] <- matrix(coef(object_w),
+                               nrow = length(coef(object_w)), ncol = 1)
+      }
+    }
+  }
+  object$set_weights(w_new)
+  return(invisible(object))
 }
+
+# layer_names <- numeric(length(object$layers))
+# for (idx in 1:length(object$layers)) {
+#   layer_names[idx] <- object$layers[[idx]]$name
+# }
+
+# else if("ontram_k" %in% class(object_w)) {
+#   n_layers <- length(get_weights(object))
+#   # complex intercept, no shift
+#   if ((w_old[[n_layers]] == 0) && (w_old[[n_layers - 1]] == 0)) {
+#     for (idx in 1:(n_layers - 2)) {
+#       w_new$baseline[[idx]] <- get_weights(object_w)[[idx]]
+#     }
+#   }
+#   # complex intercept, linear shift missing
+#   # simple intercept complex shift missing
+# }
