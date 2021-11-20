@@ -124,10 +124,11 @@ layer_trafo_intercept <- function() {
 #' mbl(matrix(1))
 #' @export
 k_mod_baseline <- function(K, ...) {
-  keras_model_sequential() %>%
+  mbl <- keras_model_sequential() %>%
     layer_dense(units = K - 1L, input_shape = 1L, use_bias = FALSE,
-                ... = ...) %>%
-    layer_trafo_intercept()()
+                ... = ...)
+  to_theta <- layer_trafo_intercept()
+  keras_model(mbl$input, to_theta(mbl$output))
 }
 
 #' S3 methods for \code{k_ontram}
