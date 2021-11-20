@@ -9,7 +9,7 @@
 \arguments{
 \item{object}{an object of class \code{\link{k_ontram}}.}
 
-\item{object_w}{an object of class \code{\link[tram]{Polr}} from which model weights are taken.}
+\item{object_w}{an object of class \code{\link[tram]{Polr}} or \code{\link{k_ontram}} from which weights are taken.}
 }
 \description{
 Set initial weights
@@ -23,15 +23,23 @@ y <- model.matrix(~ 0 + rating, data = wine)
 x <- ontram:::.rm_int(model.matrix(rating ~ temp + contact, data = wine))
 im <- ontram:::.rm_int(model.matrix(rating ~ noise, data = wine))
 loss <- k_ontram_loss(ncol(y))
-mod_polr <- Polr(fm, data = wine)
+mod_polr <- Polr(rating ~ temp + contact, data = wine)
 mbl <- k_mod_baseline(ncol(y), name = "baseline")
 msh <- mod_shift(ncol(x), name = "shift")
 mim <- keras_model_sequential() \%>\%
-layer_dense(units = 8, input_shape = 1L, activation = "relu") \%>\%
+  layer_dense(units = 8, input_shape = 1L, activation = "relu") \%>\%
   layer_dense(units = 16, activation = "relu") \%>\%
   layer_dense(units = 1, use_bias = FALSE)
 mo <- k_ontram(mbl, list(msh, mim))
-compile(mo, loss = loss)
-fit(mo, x = list(matrix(1, nrow = nrow(wine)), x, im), y = y, batch_size = 10, epoch = 20)
-warmstart(mo, mod_polr, which = "shift only")
+warmstart(mo, mod_polr, which = "baseline only")
+
+compile(mo, loss = loss, optimizer = optimizer_adam(learning_rate = 1e-2))
+fit(mo, x = list(matrix(1, nrow = nrow(wine)), x, im), y = y)
+mbl2 <- k_mod_baseline(ncol(y))
+mim2 <- keras_model_sequential() \%>\%
+  layer_dense(units = 8, input_shape = 1L, activation = "relu") \%>\%
+  layer_dense(units = 16, activation = "relu") \%>\%
+  layer_dense(units = 1, use_bias = FALSE)
+mo2 <- k_ontram(mbl2, mim2)
+warmstart(mo2, mo, which = "all")
 }
