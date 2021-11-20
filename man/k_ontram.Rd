@@ -45,6 +45,6 @@ tmp[[3]][] <- coef(tm)[3]
 set_weights(m, tmp)
 
 loss(k_constant(Y), m(list(INT, X, Z)))
-- logLik(tm)
+- logLik(tm) / nrow(wine)
 
 }
