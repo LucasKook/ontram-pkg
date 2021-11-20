@@ -25,7 +25,9 @@ INT <- matrix(1, nrow = nrow(wine))
 
 m(list(INT, X, Z))
 loss <- k_ontram_loss(ncol(Y))
-compile(m, loss = loss, optimizer = optimizer_adam(lr = 1e-2, decay = 0.001))
+cent <- metric_ontram_crossent(ncol(Y))
+compile(m, loss = loss, optimizer = optimizer_adam(lr = 1e-2, decay = 0.001),
+metrics = c(cent))
 fit(m, x = list(INT, X, Z), y = Y, batch_size = nrow(wine), epoch = 10,
     view_metrics = FALSE)
 
