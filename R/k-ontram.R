@@ -137,11 +137,13 @@ k_mod_baseline <- function(K, ...) {
 predict.k_ontram <- function(object, x,
                              type = c("distribution", "density", "trafo",
                                       "baseline_only", "hazard", "cumhazard",
-                                      "survivor", "odds"),
+                                      "survivor", "odds", "raw"),
                              ...) {
   type <- match.arg(type)
   class(object) <- class(object)[-1L]
   preds <- predict(object, x = x, ... = ...)
+  if (type == "raw")
+    return(preds)
   K <- ncol(preds)
   baseline <- preds[, 1L:(K - 1L)]
   shift <- do.call("cbind", lapply(1L:(K - 1L), function(x) preds[, K]))

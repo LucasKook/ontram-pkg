@@ -8,7 +8,7 @@
   object,
   x,
   type = c("distribution", "density", "trafo", "baseline_only", "hazard", "cumhazard",
-    "survivor", "odds"),
+    "survivor", "odds", "raw"),
   ...
 )
 }
