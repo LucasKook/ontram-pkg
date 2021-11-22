@@ -22,8 +22,9 @@ Z <- ontram:::.rm_int(model.matrix(~ noise, data = wine))
 INT <- matrix(1, nrow = nrow(wine))
 
 loss <- k_ontram_loss(ncol(Y))
-compile(m, loss = loss, optimizer = optimizer_adam(lr = 1e-2, decay = 0.001))
-fit(m, x = list(INT, X, Z), y = Y, batch_size = nrow(wine), epoch = 10,
+compile(m, loss = loss, optimizer = optimizer_adam(lr = 1e-2, decay = 0.001),
+        metrics = c(metric_rps(ncol(Y))))
+fit(m, x = list(INT, X, Z), y = Y, batch_size = ncol(Y), epoch = 10,
     view_metrics = FALSE)
 
 tm <- Polr(rating ~ temp + contact + noise, data = wine)
@@ -35,6 +36,6 @@ tmp[[3]][] <- coef(tm)[3]
 set_weights(m, tmp)
 
 loss(k_constant(Y), m(list(INT, X, Z)))
-- logLik(tm)
+- logLik(tm) / nrow(wine)
 
 predict(m, list(INT, X, Z), type = "cumhaz")

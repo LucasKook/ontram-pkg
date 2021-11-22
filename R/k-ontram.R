@@ -70,7 +70,7 @@ k_ontram <- function(
 #' @export
 k_ontram_loss <- function(K) {
   function(y_true, y_pred) {
-    intercepts <- y_pred[, 1L:(K - 1L), drop = TRUE]
+    intercepts <- y_pred[, 1L:(K - 1L), drop = FALSE]
     shifts <- y_pred[, K, drop = TRUE]
     yu <- y_true[, 1L:(K - 1L), drop = FALSE]
     yl <- y_true[, 2L:K, drop = FALSE]
@@ -84,24 +84,22 @@ k_ontram_loss <- function(K) {
   }
 }
 
-#' Categorical cross-entropy metric
+#' CRPS metric
 #' @examples
-#' cent <- metric_ontram_crossent(ncol(Y))
-#' cent(y_true, m$output)
-#' cent(k_constant(Y), m(list(INT, X, Z)))
+#' k_rps <- metric_rps(ncol(Y))
+#' k_rps(k_constant(Y), m$output)
+#' k_rps(k_constant(Y), m(list(INT, X, Z)))
 #' @export
-metric_ontram_crossent <- function(K) {
+metric_rps <- function(K) {
   ret <- function(y_true, y_pred) {
     intercepts <- y_pred[, 1L:(K - 1L), drop = FALSE]
     shifts <- y_pred[, K, drop = FALSE]
-    cdf <- layer_concatenate(list(k_constant(0, shape = c(y_true$shape[[1L]], 1L)),
-                                  k_sigmoid(intercepts - shifts),
-                                  k_constant(1, shape = c(y_true$shape[[1L]], 1L))),
-                             axis = 1L)
-    pdf <- cdf[, 2L:(K + 1L)] - cdf[, 1L:K]
-    k_mean(k_categorical_crossentropy(y_true, pdf))
+    y_cum <- tf$cumsum(y_true, axis = 1L)
+    cdf <- k_sigmoid(intercepts - shifts)
+    briers <- (cdf - y_cum[, 1L:(K - 1L), drop = FALSE])^2
+    crps <- k_mean(k_mean(briers, axis = 1L))
   }
-  custom_metric("ontram_crossent", ret)
+  custom_metric("k_rps", ret)
 }
 
 #' Layer for transforming raw intercepts
