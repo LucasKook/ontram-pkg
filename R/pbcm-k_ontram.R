@@ -55,6 +55,7 @@ pbcm <- function(m, x, y, n_split = 5, n_npBoot = 1, n_sim = 1, split = c(0.9, 0
     set.seed(seed)
   }
   n_mod <- length(m)
+  K <- ncol(y)
   nll_sim <- array(numeric(0), dim = c(n_split * n_npBoot, n_mod, n_mod))
   dimnames(nll_sim) <- list(NULL, NULL, paste0(rep("sampled_mod_", n_mod), 1L:n_mod))
   nll_obs <- vector(mode = "list", n_mod)
@@ -77,21 +78,42 @@ pbcm <- function(m, x, y, n_split = 5, n_npBoot = 1, n_sim = 1, split = c(0.9, 0
 
       ## FIT MODELS ##
       m_fit <- mapply(function(mod, x_train, epochs, n_mod) {
-        filepath <- paste0("ckpts/best_weights_m", n_mod)
-        callback_args <- c(filepath, callback_model_ckpts_args)
-        callbacks <- list(do.call(callback_model_checkpoint, callback_args))
-        compile(mod, optimizer = optimizer, loss = loss)
-        fit(mod, x = x_train, y = y_train, batch_size = batch_size, epochs = epochs,
-            validation_split = split[3L], shuffle = TRUE, callbacks = callbacks,
-            view_metrics = FALSE)
-        load_model_weights_hdf5(mod, filepath)
+        if ("k_ontram" %in% class(mod)) {
+          filepath <- paste0("ckpts/best_weights_m", n_mod)
+          callback_args <- c(filepath, callback_model_ckpts_args)
+          callbacks <- list(do.call(callback_model_checkpoint, callback_args))
+          compile(mod, optimizer = optimizer, loss = loss)
+          fit(mod, x = x_train, y = y_train, batch_size = batch_size, epochs = epochs,
+              validation_split = split[3L], shuffle = TRUE, callbacks = callbacks,
+              view_metrics = FALSE)
+          load_model_weights_hdf5(mod, filepath)
+        } else if ("Polr" %in% class(mod)) {
+          y_name <- names(mod$data)[1L]
+          fm <- deparse(formula(getCall(mod)))
+          fm <- formula(sub(y_name, "y_train", fm))
+          y_train <- apply(y_train, 1, which.max)
+          x_train <- x_train[[1]]
+          df_train <- data.frame(cbind(y_train, x_train))
+          df_train$y_train <- ordered(df_train$y_train, levels = 1:K)
+          names(df_train)[-1L] <- names(mod$data)[-1L]
+          mod <- Polr(fm, data = df_train)
+        }
         return(invisible(mod))
       }, mod = m, x_train = x_train, epochs = epochs, n_mod = 1:n_mod, SIMPLIFY = FALSE)
       unlink("ckpts", recursive = TRUE)
 
       ## CALC OBSERVED NLL ##
       nll <- mapply(function(mod, x_test) {
-        as.numeric(loss(k_constant(y_test), mod(x_test)))
+        if ("k_ontram" %in% class(mod)) {
+          as.numeric(loss(k_constant(y_test), mod(x_test)))
+        } else if ("Polr" %in% class(mod)) {
+          y_test <- apply(y_test, 1, which.max)
+          x_test <- x_test[[1]]
+          df_test <- data.frame(cbind(y_test, x_test))
+          df_test$y_test <- ordered(df_test$y_test, levels = 1:K)
+          names(df_test) <- names(mod$data)
+          -logLik(mod, newdata = df_test)/nrow(df_test)
+        }
       }, mod = m_fit, x_test = x_test, SIMPLIFY = FALSE)
       nll_obs <- mapply(function(nll_obs, nll) {
         append(nll_obs, nll)
@@ -99,8 +121,15 @@ pbcm <- function(m, x, y, n_split = 5, n_npBoot = 1, n_sim = 1, split = c(0.9, 0
 
       ## SIMULATE NEW RESPONSES ##
       y_sim_train <- mapply(function(mod, x_train) {
-        ret <- simulate(mod, x = x_train, nsim = n_sim)
-        ret <- model.matrix(~ 0 + unlist(ret))
+        if ("k_ontram" %in% class(mod)) {
+          ret <- simulate(mod, x = x_train, nsim = n_sim)
+          ret <- model.matrix(~ 0 + unlist(ret))
+        } else if ("Polr" %in% class(mod)) {
+          df_train <- data.frame(x_train[[1L]])
+          names(df_train) <- names(mod$data)[-1L]
+          ret <- simulate(mod, newdata = df_train, nsim = n_sim)
+          ret <- model.matrix(~ 0 + unlist(ret))
+        }
         return(ret)
       }, mod = m_fit, x_train = x_train, SIMPLIFY = FALSE)
       x_train <- lapply(x_train, function(x_train) {
@@ -116,8 +145,15 @@ pbcm <- function(m, x, y, n_split = 5, n_npBoot = 1, n_sim = 1, split = c(0.9, 0
         })
       })
       y_sim_test <- mapply(function(mod, x_test) {
-        ret <- simulate(mod, x = x_test, nsim = n_sim)
-        ret <- model.matrix(~ 0 + unlist(ret))
+        if ("k_ontram" %in% class(mod)) {
+          ret <- simulate(mod, x = x_test, nsim = n_sim)
+          ret <- model.matrix(~ 0 + unlist(ret))
+        } else if ("Polr" %in% class(mod)) {
+          df_test <- data.frame(x_test[[1L]])
+          names(df_test) <- names(mod$data)[-1L]
+          ret <- simulate(mod, newdata = df_test, nsim = n_sim)
+          ret <- model.matrix(~ 0 + unlist(ret))
+        }
         return(ret)
       }, mod = m_fit, x_test = x_test, SIMPLIFY = FALSE)
       x_test <- lapply(x_test, function(x_test) {
@@ -136,47 +172,68 @@ pbcm <- function(m, x, y, n_split = 5, n_npBoot = 1, n_sim = 1, split = c(0.9, 0
       ## REFIT MODELS ##
       m_refit <- mapply(function(mod, x_train, epochs, n_mod) {
         mapply(function(y_sim_train, n_fit) {
-          .reset_weights(mod)
-          mbl <- mod$mod_baseline
-          msh <- mod$list_of_shift_models
-          if (length(msh) == 1) {
-            mbl <- clone_model(mbl)
-            msh <- clone_model(msh)
-            mod_new <- k_ontram(mbl, msh)
-          } else if (length(msh) >= 2) {
-            mbl <- clone_model(mbl)
-            tmp <- vector(mode = "list", length(msh))
-            for (idx in seq_along(msh)) {
-              tmp[[idx]] <- clone_model(msh[[idx-1]])
+          if ("k_ontram" %in% class(mod)) {
+            .reset_weights(mod)
+            mbl <- mod$mod_baseline
+            msh <- mod$list_of_shift_models
+            if (length(msh) == 1L) {
+              mbl <- clone_model(mbl)
+              msh <- clone_model(msh)
+              mod_new <- k_ontram(mbl, msh)
+            } else if (length(msh) >= 2L) {
+              mbl <- clone_model(mbl)
+              tmp <- vector(mode = "list", length(msh))
+              for (idx in seq_along(msh)) {
+                tmp[[idx]] <- clone_model(msh[[idx-1L]])
+              }
+              msh <- tmp
             }
-            msh <- tmp
+            mod_new <- k_ontram(mbl, msh)
+            filepath <- paste0("ckpts/best_weights_m", n_mod, "_refit", n_fit)
+            callback_args <- c(filepath, callback_model_ckpts_args)
+            callbacks <- list(do.call(callback_model_checkpoint, callback_args))
+            compile(mod_new, optimizer = optimizer, loss = loss)
+            fit(mod_new, x = x_train, y = y_sim_train, batch_size = batch_size, epochs = epochs,
+                validation_split = split[3L], shuffle = TRUE, callbacks = callbacks,
+                view_metrics = FALSE)
+            load_model_weights_hdf5(mod_new, filepath)
+          } else if ("Polr" %in% class(mod)) {
+            y_name <- names(mod$data)[1L]
+            fm <- deparse(formula(getCall(mod)))
+            fm <- formula(sub(y_name, "y_sim_train", fm))
+            y_sim_train <- apply(y_sim_train, 1, which.max)
+            df_train <- data.frame(cbind(y_sim_train, unlist(x_train[[1L]])))
+            df_train$y_sim_train <- ordered(df_train$y_sim_train, levels = 1:K)
+            names(df_train)[-1L] <- names(mod$data)[-1L]
+            mod_new <- Polr(fm, data = df_train)
           }
-          mod_new <- k_ontram(mbl, msh)
-          filepath <- paste0("ckpts/best_weights_m", n_mod, "_refit", n_fit)
-          callback_args <- c(filepath, callback_model_ckpts_args)
-          callbacks <- list(do.call(callback_model_checkpoint, callback_args))
-          compile(mod_new, optimizer = optimizer, loss = loss)
-          fit(mod_new, x = x_train, y = y_sim_train, batch_size = batch_size, epochs = epochs,
-              validation_split = split[3L], shuffle = TRUE, callbacks = callbacks,
-              view_metrics = FALSE)
-          load_model_weights_hdf5(mod_new, filepath)
-        }, y_sim_train = y_sim_train, n_fit = 1:length(m), SIMPLIFY = FALSE)
-      }, mod = m, x_train = x_train, epochs = epochs, n_mod = 1:n_mod, SIMPLIFY = FALSE)
+          return(mod_new)
+        }, y_sim_train = y_sim_train, n_fit = 1L:length(m), SIMPLIFY = FALSE)
+      }, mod = m, x_train = x_train, epochs = epochs, n_mod = 1L:n_mod, SIMPLIFY = FALSE)
       unlink("ckpts", recursive = TRUE)
-      m_refit <- unlist(m_refit)
+      m_refit <- unlist(m_refit, recursive = FALSE)
 
       ## CALC NLL ##
-      x_test <- rep(x_test, each = 2)
+      x_test <- rep(x_test, each = n_mod)
       nll <- mapply(function(mod, x_test) {
         lapply(y_sim_test, function(y_sim_test) {
-          as.numeric(loss(k_constant(y_sim_test), mod(x_test)))
+          if ("k_ontram" %in% class(mod)) {
+            as.numeric(loss(k_constant(y_sim_test), mod(x_test)))
+          } else if ("Polr" %in% class(mod)) {
+            y_test <- apply(y_sim_test, 1, which.max)
+            x_test <- x_test[[1]]
+            df_test <- data.frame(cbind(y_test, x_test))
+            df_test$y_test <- ordered(df_test$y_test, levels = 1:K)
+            names(df_test) <- names(mod$data)
+            -logLik(mod, newdata = df_test)/nrow(df_test)
+          }
         })
       }, mod = m_refit, x_test = x_test, SIMPLIFY = FALSE)
       for (fit in seq_len(n_mod)) {
         for (sim in seq_len(n_mod)) {
-          if (s == 1) {
+          if (s == 1L) {
             nll_sim[b, fit, sim] <- nll[[fit]][[sim]]
-          } else if (s >= 2) {
+          } else if (s >= 2L) {
             nll_sim[s-1*n_npBoot+b, fit, sim] <- nll[[fit]][[sim]]
           }
         }
