@@ -11,6 +11,7 @@ Keras interface to ONTRAMs
 }
 \examples{
 library(tram)
+set.seed(2021)
 mbl <- k_mod_baseline(5L, name = "baseline")
 msh <- mod_shift(2L, name = "linear_shift")
 mim <- mod_shift(1L, name = "complex_shift")
@@ -25,7 +26,7 @@ INT <- matrix(1, nrow = nrow(wine))
 
 m(list(INT, X, Z))
 loss <- k_ontram_loss(ncol(Y))
-compile(m, loss = loss, optimizer = optimizer_adam(lr = 1e-2, decay = 0.001))
+compile(m, loss = loss, optimizer = optimizer_adam(learning_rate = 1e-2, decay = 0.001))
 fit(m, x = list(INT, X, Z), y = Y, batch_size = nrow(wine), epoch = 10,
     view_metrics = FALSE)
 
@@ -45,4 +46,19 @@ set_weights(m, tmp)
 loss(k_constant(Y), m(list(INT, X, Z)))
 - logLik(tm)
 
+## Complex intercept ##
+
+mim2 <- keras_model_sequential() \%>\%
+   layer_dense(units = 4, input_shape = 1L, activation = "relu") \%>\%
+   layer_dense(units = ncol(Y) - 1, use_bias = FALSE)
+
+mbl2 <- k_mod_baseline(ncol(Y), mod_complex = mim2)
+m2 <- k_ontram(mbl2)
+compile(m2, loss = loss, optimizer = optimizer_adam(learning_rate = 1e-2, decay = 0.001))
+fit(m2, x = list(INT, Z), y = Y, batch_size = nrow(wine), epoch = 10,
+    view_metrics = FALSE)
+
+get_weights(m2$mod_baseline[[0]])
+warmstart(m2, tm, "baseline only")
+get_weights(m2$mod_baseline[[0]])
 }

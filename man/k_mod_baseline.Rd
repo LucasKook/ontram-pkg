@@ -4,7 +4,7 @@
 \alias{k_mod_baseline}
 \title{keras mbl}
 \usage{
-k_mod_baseline(K, ...)
+k_mod_baseline(K, mod_complex = NULL, ...)
 }
 \description{
 keras mbl
