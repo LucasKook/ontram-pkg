@@ -181,12 +181,12 @@ k_mod_baseline <- function(K, mod_complex = NULL, ...) {
       layer_dense(units = K - 1L, input_shape = 1L, use_bias = FALSE,
                   ... = ...)
   } else {
-   mod_gamma <- keras_model_sequential() %>%
+   mod_gamma_tilde <- keras_model_sequential() %>%
       layer_dense(units = K - 1L, input_shape = c(1L),
                   kernel_initializer = initializer_zeros(),
                   use_bias = FALSE, trainable = FALSE)
-   mod_gamma_prime <- mod_complex
-   list(mod_gamma, mod_gamma_prime)
+   mod_epsilon <- mod_complex
+   list(mod_gamma_tilde, mod_epsilon)
   }
 }
 
