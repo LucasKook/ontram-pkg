@@ -21,9 +21,10 @@ Y <- model.matrix(~ 0 + rating, data = wine)
 Z <- ontram:::.rm_int(model.matrix(~ noise, data = wine))
 INT <- matrix(1, nrow = nrow(wine))
 
-loss <- k_ontram_loss(ncol(Y))
+k_nll <- k_ontram_loss(ncol(Y))
+loss <- k_ontram_rps(ncol(Y))
 compile(m, loss = loss, optimizer = optimizer_adam(lr = 1e-2, decay = 0.001),
-        metrics = c(metric_rps(ncol(Y))))
+        metrics = c(metric_nll(ncol(Y))))
 fit(m, x = list(INT, X, Z), y = Y, batch_size = ncol(Y), epoch = 10,
     view_metrics = FALSE)
 
@@ -35,7 +36,7 @@ tmp[[2]][] <- coef(tm)[1:2]
 tmp[[3]][] <- coef(tm)[3]
 set_weights(m, tmp)
 
-loss(k_constant(Y), m(list(INT, X, Z)))
+k_nll(k_constant(Y), m(list(INT, X, Z)))
 - logLik(tm) / nrow(wine)
 
-predict(m, list(INT, X, Z), type = "cumhaz")
+head(predict(m, list(INT, X, Z), type = "cumhaz"))
