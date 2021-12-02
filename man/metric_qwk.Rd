@@ -2,10 +2,10 @@
 % Please edit documentation in R/k-ontram.R
 \name{metric_qwk}
 \alias{metric_qwk}
-\title{Continuous qwk metric}
+\title{Discrete qwk metric}
 \usage{
 metric_qwk(K, p = 2L)
 }
 \description{
-Continuous qwk metric
+Discrete qwk metric
 }

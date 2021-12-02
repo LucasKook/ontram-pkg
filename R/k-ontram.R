@@ -249,11 +249,10 @@ k_ontram_qwk <- function(K, p = 2L) {
   }
 }
 
-#' Continuous qwk metric
+#' Discrete qwk metric
 #' @export
 metric_qwk <- function(K, p = 2L) {
-  met <- function(y_true, y_pred) 1 - k_exp(k_ontram_qwk(K, p)(y_true, y_pred))
-  custom_metric("k_qwk", met)
+  custom_metric("k_qwk", k_ontram_qwk(K, p))
 }
 
 #' Layer for transforming raw intercepts
