@@ -27,7 +27,7 @@ compile(m, loss = loss, optimizer = optimizer_adam(lr = 1e-2, decay = 0.001),
         metrics = c(
           metric_nll(ncol(Y)),
           metric_acc(ncol(Y)),
-          metric_qwk(ncol(Y)),
+          metric_cqwk(ncol(Y)),
           metric_k_auc(ncol(Y)),
           metric_binll(ncol(Y))
         )
