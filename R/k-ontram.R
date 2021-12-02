@@ -133,6 +133,12 @@ k_ontram_acc <- function(K) {
   }
 }
 
+#' Accuracy metric
+#' @export
+metric_acc <- function(K) {
+  custom_metric("k_acc", k_ontram_acc(K))
+}
+
 #' Continuous qwk
 #' @examples
 #' k_qwk <- k_ontram_qwk(ncol(Y))
@@ -163,12 +169,6 @@ k_ontram_qwk <- function(K, p = 2L) {
 metric_qwk <- function(K, p = 2L) {
   met <- function(y_true, y_pred) 1 - k_exp(k_ontram_qwk(K, p)(y_true, y_pred))
   custom_metric("k_qwk", met)
-}
-
-#' Accuracy metric
-#' @export
-metric_acc <- function(K) {
-  custom_metric("k_acc", k_ontram_acc(K))
 }
 
 #' Layer for transforming raw intercepts
