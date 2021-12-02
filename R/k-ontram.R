@@ -133,6 +133,38 @@ k_ontram_acc <- function(K) {
   }
 }
 
+#' Continuous qwk
+#' @examples
+#' k_qwk <- k_ontram_qwk(ncol(Y))
+#' k_qwk(k_constant(Y), m(list(INT, X, Z)))
+#' k_qwk(k_constant(Y), m$output)
+#' @export
+k_ontram_qwk <- function(K, p = 2L) {
+  weights <- k_constant(weight_scheme(K, p))
+  function(y_true, y_pred) {
+    intercepts <- y_pred[, 1L:(K - 1L), drop = FALSE]
+    shifts <- y_pred[, K, drop = FALSE]
+    cdf <- k_sigmoid(intercepts - shifts)
+    p1 <- cdf[, 1L, drop = FALSE]
+    pK <- 1 - cdf[, K - 1L, drop = FALSE]
+    pmf <- k_concatenate(list(p1, cdf[, 2L:(K - 1L), drop = FALSE] -
+                                cdf[, 1L:(K - 2L), drop = FALSE], pK))
+    idx <- k_argmax(y_true)
+    wgts <- tf$gather(weights, idx, axis = 0L)
+    num <- k_sum(wgts * pmf)
+    fi <- k_sum(y_true, axis = 1L) / k_sum(y_true)
+    den <- k_sum(fi * tf$linalg$matvec(weights, k_sum(pmf, axis = 1L)))
+    k_log(num + 1e-32) - k_log(den + 1e-32)
+  }
+}
+
+#' Continuous qwk metric
+#' @export
+metric_qwk <- function(K, p = 2L) {
+  met <- function(y_true, y_pred) 1 - k_exp(k_ontram_qwk(K, p)(y_true, y_pred))
+  custom_metric("k_qwk", met)
+}
+
 #' Accuracy metric
 #' @export
 metric_acc <- function(K) {
