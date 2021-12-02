@@ -84,16 +84,6 @@ k_ontram_loss <- function(K) {
   }
 }
 
-#' CRPS metric
-#' @examples
-#' k_rps <- metric_rps(ncol(Y))
-#' k_rps(k_constant(Y), m$output)
-#' k_rps(k_constant(Y), m(list(INT, X, Z)))
-#' @export
-metric_rps <- function(K) {
-  custom_metric("k_rps", k_ontram_rps(K))
-}
-
 #' NLL metric
 #' @export
 metric_nll <- function(K) {
@@ -113,6 +103,40 @@ k_ontram_rps <- function(K) {
     briers <- (cdf - y_cum[, 1L:(K - 1L), drop = FALSE])^2
     k_mean(k_mean(briers, axis = 1L))
   }
+}
+
+#' CRPS metric
+#' @examples
+#' k_rps <- metric_rps(ncol(Y))
+#' k_rps(k_constant(Y), m$output)
+#' k_rps(k_constant(Y), m(list(INT, X, Z)))
+#' @export
+metric_rps <- function(K) {
+  custom_metric("k_rps", k_ontram_rps(K))
+}
+
+#' Accuracy function
+#' @examples
+#' k_acc <- k_ontram_acc(ncol(Y))
+#' k_acc(k_constant(Y), m(list(INT, X, Z)))
+#' k_acc(k_constant(Y), m$output)
+k_ontram_acc <- function(K) {
+  function(y_true, y_pred) {
+    intercepts <- y_pred[, 1L:(K - 1L), drop = FALSE]
+    shifts <- y_pred[, K, drop = FALSE]
+    cdf <- k_sigmoid(intercepts - shifts)
+    p1 <- cdf[, 1L, drop = FALSE]
+    pK <- 1 - cdf[, K - 1L, drop = FALSE]
+    pmf <- k_concatenate(list(p1, cdf[, 2L:(K - 1L), drop = FALSE] -
+                                cdf[, 1L:(K - 2L), drop = FALSE], pK))
+    k_mean(tf$metrics$categorical_accuracy(y_true, pmf))
+  }
+}
+
+#' Accuracy metric
+#' @export
+metric_acc <- function(K) {
+  custom_metric("k_acc", k_ontram_acc(K))
 }
 
 #' Layer for transforming raw intercepts
