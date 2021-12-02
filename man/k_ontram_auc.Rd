@@ -11,7 +11,6 @@ AUC function
 }
 \examples{
 k_auc <- k_ontram_auc(ncol(Y))
-debugonce(k_auc)
 k_auc(k_constant(Y), m(list(INT, X, Z)))
 k_auc(k_constant(Y), m$output)
 }

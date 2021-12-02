@@ -11,7 +11,6 @@ Binary logLik function
 }
 \examples{
 k_binll <- k_ontram_binll(ncol(Y))
-debugonce(k_binll)
 k_binll(k_constant(Y), m(list(INT, X, Z)))
 k_binll(k_constant(Y), m$output)
 }

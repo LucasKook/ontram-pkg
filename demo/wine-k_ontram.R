@@ -24,9 +24,15 @@ m <- k_ontram(mbl, list(msh, mim))
 k_nll <- k_ontram_loss(ncol(Y))
 loss <- k_ontram_rps(ncol(Y))
 compile(m, loss = loss, optimizer = optimizer_adam(lr = 1e-2, decay = 0.001),
-        metrics = c(metric_nll(ncol(Y)), metric_acc(ncol(Y)), metric_qwk(ncol(Y)),
-                    metric_k_auc(ncol(Y)), metric_binll(ncol(Y))))
-mh <- fit(m, x = list(INT, X, Z), y = Y, batch_size = floor(0.9 * ncol(Y)), epoch = 200,
+        metrics = c(
+          metric_nll(ncol(Y)),
+          metric_acc(ncol(Y)),
+          metric_qwk(ncol(Y)),
+          metric_k_auc(ncol(Y)),
+          metric_binll(ncol(Y))
+        )
+)
+mh <- fit(m, x = list(INT, X, Z), y = Y, batch_size = ncol(Y), epoch = 200,
     view_metrics = FALSE, validation_split = 0.1)
 plot(mh)
 
@@ -50,3 +56,6 @@ tm_preds <- predict(tm, newdata = wine[, !colnames(wine) == "rating"],
 
 loss(k_constant(Y), m(list(INT, X, Z)))
 rps_polr(Y, tm_preds)
+
+pROC::auc(wine$rating <= 3L, predict(tm, type = "distribution", newdata = wine[, !colnames(wine) == "rating"])[3,])
+evaluate(m, list(INT, X, Z), Y, batch_size = ncol(Y))
