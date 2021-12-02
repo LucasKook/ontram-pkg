@@ -186,11 +186,11 @@ metric_acc <- function(K) {
 
 #' Continuous qwk
 #' @examples
-#' k_qwk <- k_ontram_qwk(ncol(Y))
+#' k_qwk <- k_ontram_cqwk(ncol(Y))
 #' k_qwk(k_constant(Y), m(list(INT, X, Z)))
 #' k_qwk(k_constant(Y), m$output)
 #' @export
-k_ontram_qwk <- function(K, p = 2L) {
+k_ontram_cqwk <- function(K, p = 2L) {
   weights <- k_constant(weight_scheme(K, p))
   function(y_true, y_pred) {
     intercepts <- y_pred[, 1L:(K - 1L), drop = FALSE]
@@ -206,6 +206,46 @@ k_ontram_qwk <- function(K, p = 2L) {
     fi <- k_sum(y_true, axis = 1L) / k_sum(y_true)
     den <- k_sum(fi * tf$linalg$matvec(weights, k_sum(pmf, axis = 1L)))
     k_log(num + 1e-32) - k_log(den + 1e-32)
+  }
+}
+
+#' Continuous qwk metric
+#' @export
+metric_cqwk <- function(K, p = 2L) {
+  met <- function(y_true, y_pred) 1 - k_exp(k_ontram_cqwk(K, p)(y_true, y_pred))
+  custom_metric("k_cqwk", met)
+}
+
+#' Discrete qwk
+#' @examples
+#' k_qwk <- k_ontram_qwk(ncol(Y))
+#' debugonce(k_qwk)
+#' k_qwk(k_constant(Y), m(list(INT, X, Z)))
+#' k_qwk(k_constant(Y), m$output)
+#' @export
+k_ontram_qwk <- function(K, p = 2L) {
+  weights <- k_constant(weight_scheme(K, p))
+  function(y_true, y_pred) {
+    intercepts <- y_pred[, 1L:(K - 1L), drop = FALSE]
+    shifts <- y_pred[, K, drop = FALSE]
+    cdf <- k_sigmoid(intercepts - shifts)
+    p1 <- cdf[, 1L, drop = FALSE]
+    pK <- 1 - cdf[, K - 1L, drop = FALSE]
+    pmf <- k_concatenate(list(p1, cdf[, 2L:(K - 1L), drop = FALSE] -
+                                cdf[, 1L:(K - 2L), drop = FALSE], pK))
+    pt <- k_argmax(pmf, axis = 0L)
+    yt <- k_argmax(y_true)
+    cmat <- tf$cast(tf$math$confusion_matrix(yt, pt), dtype = "float32")
+    observed_margin <- k_sum(cmat, axis = 0L)
+    predicted_margin <- k_sum(cmat, axis = 1L)
+
+    expected_cmat <- tf$linalg$matmul(
+      k_reshape(observed_margin, shape = c(observed_margin$shape[[1L]], 1L)),
+      k_reshape(predicted_margin, shape = c(1L, predicted_margin$shape[[1L]]))
+    ) / y_true$shape[[1L]]
+
+    (k_sum(weights * cmat) - k_sum(weights * expected_cmat)) /
+      (1 - k_sum(weights * expected_cmat))
   }
 }
 
