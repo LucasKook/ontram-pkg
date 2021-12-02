@@ -115,6 +115,52 @@ metric_rps <- function(K) {
   custom_metric("k_rps", k_ontram_rps(K))
 }
 
+#' Binary logLik function
+#' @examples
+#' k_binll <- k_ontram_binll(ncol(Y))
+#' debugonce(k_binll)
+#' k_binll(k_constant(Y), m(list(INT, X, Z)))
+#' k_binll(k_constant(Y), m$output)
+k_ontram_binll <- function(K, cutoff = 3L) {
+  function(y_true, y_pred) {
+    intercepts <- y_pred[, 1L:(K - 1L), drop = FALSE]
+    shifts <- y_pred[, K, drop = FALSE]
+    cdf <- k_sigmoid(intercepts - shifts)
+    pbin <- cdf[, cutoff, drop = TRUE]
+    ybin <- k_sum(y_true[, 1L:cutoff, drop = FALSE], axis = 0L)
+    k_mean(k_binary_crossentropy(ybin, pbin))
+  }
+}
+
+#' Accuracy metric
+#' @export
+metric_k_auc <- function(K, cutoff = 3L) {
+  custom_metric("k_auc", k_ontram_auc(K, cutoff))
+}
+
+#' AUC function
+#' @examples
+#' k_auc <- k_ontram_auc(ncol(Y))
+#' debugonce(k_auc)
+#' k_auc(k_constant(Y), m(list(INT, X, Z)))
+#' k_auc(k_constant(Y), m$output)
+k_ontram_auc <- function(K, cutoff = 3L) {
+  function(y_true, y_pred) {
+    intercepts <- y_pred[, 1L:(K - 1L), drop = FALSE]
+    shifts <- y_pred[, K, drop = FALSE]
+    cdf <- k_sigmoid(intercepts - shifts)
+    pbin <- cdf[, cutoff, drop = TRUE]
+    ybin <- k_sum(y_true[, 1L:cutoff, drop = FALSE], axis = 0L)
+    tf$keras$metrics$AUC()(ybin, pbin)
+  }
+}
+
+#' Accuracy metric
+#' @export
+metric_k_auc <- function(K, cutoff = 3L) {
+  custom_metric("k_auc", k_ontram_auc(K, cutoff))
+}
+
 #' Accuracy function
 #' @examples
 #' k_acc <- k_ontram_acc(ncol(Y))
