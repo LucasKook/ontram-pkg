@@ -132,10 +132,10 @@ k_ontram_binll <- function(K, cutoff = 3L) {
   }
 }
 
-#' Accuracy metric
+#' Binary NLL metric
 #' @export
-metric_k_auc <- function(K, cutoff = 3L) {
-  custom_metric("k_auc", k_ontram_auc(K, cutoff))
+metric_binll <- function(K, cutoff = 3L) {
+  custom_metric("k_binll", k_ontram_binll(K, cutoff))
 }
 
 #' AUC function
