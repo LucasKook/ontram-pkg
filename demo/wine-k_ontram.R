@@ -11,21 +11,21 @@ library(ontram)
 data("wine", package = "ordinal")
 wine$noise <- rnorm(nrow(wine))
 
-mbl <- k_mod_baseline(5L, name = "baseline")
-msh <- mod_shift(2L, name = "linear_shift")
-mim <- mod_shift(1L, name = "complex_shift")
-m <- k_ontram(mbl, list(msh, mim))
-
 X <- ontram:::.rm_int(model.matrix(~ temp + contact, data = wine))
 Y <- model.matrix(~ 0 + rating, data = wine)
 Z <- ontram:::.rm_int(model.matrix(~ noise, data = wine))
 INT <- matrix(1, nrow = nrow(wine))
 
+mbl <- k_mod_baseline(ncol(Y), name = "baseline")
+msh <- mod_shift(ncol(X), name = "linear_shift")
+mim <- mod_shift(ncol(Z), name = "complex_shift")
+m <- k_ontram(mbl, list(msh, mim))
+
 k_nll <- k_ontram_loss(ncol(Y))
 loss <- k_ontram_rps(ncol(Y))
 compile(m, loss = loss, optimizer = optimizer_adam(lr = 1e-2, decay = 0.001),
         metrics = c(metric_nll(ncol(Y)), metric_acc(ncol(Y)), metric_qwk(ncol(Y))))
-mh <- fit(m, x = list(INT, X, Z), y = Y, batch_size = floor(0.9 * ncol(Y)), epoch = 400,
+mh <- fit(m, x = list(INT, X, Z), y = Y, batch_size = floor(0.9 * ncol(Y)), epoch = 200,
     view_metrics = FALSE, validation_split = 0.1)
 plot(mh)
 
