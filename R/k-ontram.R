@@ -55,6 +55,7 @@
 k_ontram <- function(
   mod_baseline,
   list_of_shift_models = NULL,
+  response_varying = FALSE,
   ...
 ) {
   if (is.null(list_of_shift_models)) {
@@ -77,7 +78,11 @@ k_ontram <- function(
   m <- keras_model(inputs = inputs, outputs = layer_concatenate(outputs))
   m$mod_baseline <- mod_baseline
   m$list_of_shift_models <- list_of_shift_models
-  class(m) <- c("k_ontram", class(m))
+  if (response_varying) {
+    class(m) <- c("k_ontram", "k_ontram_rv", class(m))
+  } else {
+    class(m) <- c("k_ontram", class(m))
+  }
   return(m)
 }
 # k_ontram <- function(
@@ -151,12 +156,14 @@ k_ontram <- function(
 #'              view_metrics = FALSE)
 #' @export
 fit_k_ontram <- function(object, x, ...) {
-  if (is.list(x)) {
-    x <- c(list(matrix(1, nrow = nrow(x[[1]]))), x)
-  } else {
-    x <- c(list(matrix(1, nrow = nrow(x))), list(x))
+  if (!("k_ontram_rv" %in% class(object))) {
+    if (is.list(x)) {
+      x <- c(list(matrix(1, nrow = nrow(x[[1]]))), x)
+    } else {
+      x <- c(list(matrix(1, nrow = nrow(x))), list(x))
+    }
+    fit(object, x = x, ...)
   }
-  fit(object, x = x, ...)
 }
 
 #' Another keras implementation of the ontram loss
@@ -232,7 +239,16 @@ predict.k_ontram <- function(object, x,
                                       "survivor", "odds"),
                              ...) {
   type <- match.arg(type)
-  class(object) <- class(object)[-1L]
+  if ("k_ontram_rv" %in% class(object)) {
+    class(object) <- class(object)[-2L]
+  } else {
+    class(object) <- class(object)[-1L]
+    if (is.list(x)) {
+      x <- c(list(matrix(1, nrow = nrow(x[[1]]))), x)
+    } else {
+      x <- c(list(matrix(1, nrow = nrow(x))), list(x))
+    }
+  }
   preds <- predict(object, x = x, ... = ...)
   K <- ncol(preds)
   baseline <- preds[, 1L:(K - 1L)]

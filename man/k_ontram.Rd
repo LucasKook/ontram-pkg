@@ -4,7 +4,12 @@
 \alias{k_ontram}
 \title{Keras interface to ONTRAMs}
 \usage{
-k_ontram(mod_baseline, list_of_shift_models = NULL, ...)
+k_ontram(
+  mod_baseline,
+  list_of_shift_models = NULL,
+  response_varying = FALSE,
+  ...
+)
 }
 \description{
 Keras interface to ONTRAMs
