@@ -11,7 +11,6 @@ Function for estimating the model
 }
 \examples{
 set.seed(2021)
-library(tram)
 mbl <- k_mod_baseline(5L, name = "baseline")
 msh <- mod_shift(2L, name = "linear_shift")
 mim <- mod_shift(1L, name = "complex_shift")

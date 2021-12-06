@@ -85,56 +85,10 @@ k_ontram <- function(
   }
   return(m)
 }
-# k_ontram <- function(
-#   mod_baseline,
-#   list_of_shift_models = NULL,
-#   ...
-# ) {
-#   nbaseline <- length(mod_baseline)
-#   nshift <- length(list_of_shift_models)
-#   if (nbaseline == 1L) {
-#     baseline_in <- mod_baseline$input
-#     baseline_out <- mod_baseline$output %>%
-#       layer_trafo_intercept()()
-#   } else if (nbaseline == 2) {
-#     baseline_in <- lapply(mod_baseline, function(x) x$input)
-#     baseline_out <- lapply(mod_baseline, function(x) x$output) %>%
-#       layer_add() %>%
-#        layer_trafo_intercept()()
-#   }
-#   if (is.null(list_of_shift_models)) {
-#     list_of_shift_models <- keras_model_sequential() %>%
-#       layer_dense(units = 1L, input_shape = c(1L),
-#                   kernel_initializer = initializer_zeros(),
-#                   use_bias = FALSE, trainable = FALSE)
-#     shift_in <- list_of_shift_models$input
-#     shift_out <- list_of_shift_models$output
-#   }
-#   if (nshift == 1L) {
-#     shift_in <- list_of_shift_models$input
-#     shift_out <- list_of_shift_models$output
-#   } else if (nshift >= 2L) {
-#     shift_in <- lapply(list_of_shift_models, function(x) x$input)
-#     shift_out <- lapply(list_of_shift_models, function(x) x$output) %>%
-#       layer_add()
-#   }
-#   inputs <- list(baseline_in, shift_in)
-#   outputs <- list(baseline_out, shift_out)
-#   m <- keras_model(inputs = inputs, outputs = layer_concatenate(outputs))
-#   m$mod_baseline <- mod_baseline
-#   m$list_of_shift_models <- list_of_shift_models
-#   if (nbaseline == 1) {
-#     class(m) <- c("k_ontram", class(m))
-#   } else if (nbaseline == 2) {
-#     class(m) <- c("k_ontram_rv", "k_ontram", class(m))
-#   }
-#   return(m)
-# }
 
 #' Function for estimating the model
 #' @examples
 #' set.seed(2021)
-#' library(tram)
 #' mbl <- k_mod_baseline(5L, name = "baseline")
 #' msh <- mod_shift(2L, name = "linear_shift")
 #' mim <- mod_shift(1L, name = "complex_shift")
@@ -226,20 +180,29 @@ k_mod_baseline <- function(K, ...) {
                 ... = ...) %>%
     layer_trafo_intercept()()
 }
-# k_mod_baseline <- function(K, mod_complex = NULL, ...) {
-#   if (is.null(mod_complex)) {
-#     keras_model_sequential() %>%
-#       layer_dense(units = K - 1L, input_shape = 1L, use_bias = FALSE,
-#                   ... = ...)
-#   } else {
-#    mod_gamma_tilde <- keras_model_sequential() %>%
-#       layer_dense(units = K - 1L, input_shape = c(1L),
-#                   kernel_initializer = initializer_zeros(),
-#                   use_bias = FALSE, trainable = FALSE)
-#    mod_epsilon <- mod_complex
-#    list(mod_gamma_tilde, mod_epsilon)
-#   }
-# }
+
+#' Reparametrized keras mbl
+#' @details \eqn{\nu_k = \nu_k' + \epsilon}
+#' @examples
+#' library(tram)
+#' data("wine", package = "ordinal")
+#' mod_polr <- Polr(rating ~ 0, data = wine)
+#' thetas <- coef(mod_polr, with_baseline = TRUE)
+#' m <- k_mod_baseline_reparametrized(5L, thetas)
+#' get_weights(m)
+#' @export
+k_mod_baseline_reparametrized <- function(K, thetas, ...) {
+  bias_fixed <- function(x) {
+    k_constant(gammas)
+  }
+  gammas <- k_constant(.to_gamma(thetas))
+  keras_model_sequential() %>%
+    layer_dense(units = K - 1L, input_shape = 1L, use_bias = TRUE,
+                bias_initializer = initializer_constant(gammas),
+                bias_constraint = bias_fixed,
+                ... = ...) %>%
+    layer_trafo_intercept()()
+}
 
 #' S3 methods for \code{k_ontram}
 #' @method predict k_ontram
@@ -285,42 +248,6 @@ predict.k_ontram <- function(object, x,
 
   return(ret)
 }
-# predict.k_ontram <- function(object, x,
-#                              type = c("distribution", "density", "trafo",
-#                                       "baseline_only", "hazard", "cumhazard",
-#                                       "survivor", "odds"),
-#                              ...) {
-#   type <- match.arg(type)
-#   if ("k_ontram_rv" %in% class(object)) {
-#     class(object) <-  class(object)[-2L]
-#   } else {
-#     class(object) <- class(object)[-1L]
-#   }
-#   preds <- predict(object, x = x, ... = ...)
-#   K <- ncol(preds)
-#   baseline <- preds[, 1L:(K - 1L)]
-#   shift <- do.call("cbind", lapply(1L:(K - 1L), function(x) preds[, K]))
-#   trafo <- baseline - shift
-#   ccdf <- cbind(plogis(trafo), 1)
-#   cdf <- cbind(0, ccdf)
-#   pdf <- t(apply(cdf, 1, diff))
-#   surv <- 1 - ccdf
-#   haz <- pdf / (1 - ccdf)
-#   cumhaz <- - log(surv)
-#   odds <- ccdf / (1 - ccdf)
-#
-#   ret <- switch(type,
-#                 "distribution" = cdf,
-#                 "density" = pdf,
-#                 "trafo" = trafo,
-#                 "baseline_only" = baseline,
-#                 "hazard" = haz,
-#                 "cumhazard" = cumhaz,
-#                 "survivor" = surv,
-#                 "odds" = odds)
-#
-#   return(ret)
-# }
 
 #' Simulate Responses
 #' @method simulate k_ontram
@@ -468,135 +395,3 @@ warmstart.k_ontram <- function(object, object_w, which = c("all", "baseline only
   }
   return(invisible(object))
 }
-# warmstart.k_ontram <- function(object, object_w, which = c("all", "baseline only", "shift only")) {
-#   which <- match.arg(which)
-#   K <- object$output_shape[[2L]]
-#   nbaseline <- length(object$mod_baseline)
-#   nshift <- length(object$list_of_shift_models)
-#   if ("Polr" %in% class(object_w)) {
-#     if (which == "all" || which == "baseline only") {
-#       w_baseline <- list(matrix(ontram:::.to_gamma(coef(object_w, with_baseline = T)[1:K-1]),
-#                                 nrow = 1, ncol = K-1))
-#       if (nbaseline == 1L) {
-#         set_weights(object$mod_baseline, w_baseline)
-#       }
-#       else if (nbaseline == 2L) {
-#         set_weights(object$mod_baseline[[0]], w_baseline)
-#       }
-#     }
-#     if (which == "all" || which == "shift only") {
-#       if (!is.null(coef(object_w))) {
-#         w_shift <- list(matrix(coef(object_w),
-#                                nrow = length(coef(object_w)), ncol = 1))
-#         if (nshift == 1L) {
-#           set_weights(object$list_of_shift_models, w_shift)
-#         } else if (nshift >= 2L) {
-#           for (idx in 0:nshift - 1L) {
-#             if (nrow(get_weights(object$list_of_shift_models[[idx]])[[1]]) == nrow(w_shift[[1]])) {
-#               set_weights(object$list_of_shift_models[[idx]], w_shift)
-#               break
-#             }
-#           }
-#         }
-#       }
-#     }
-#   } else if ("k_ontram" %in% class(object_w)) {
-#     if (which == "all" || which == "baseline only") {
-#       if (nbaseline == 1L) {
-#         w_baseline <- get_weights(object_w$mod_baseline)
-#         set_weights(object$mod_baseline, w_baseline)
-#       } else if (nbaseline == 2L) {
-#         w_baseline <- get_weights(object_w$mod_baseline[[1L]])
-#         set_weights(object$mod_baseline[[1L]], w_baseline)
-#       }
-#     }
-#     if (which == "all" || which == "shift only"){
-#       if (nshift == 1L) {
-#         if (length(object_w$list_of_shift_models) == 1L) {
-#           w_shift <- get_weights(object_w$list_of_shift_models)
-#           set_weights(object$list_of_shift_models, w_shift)
-#         } else {
-#           for (idx in 0:length(object_w$list_of_shift_models) - 1L) {
-#             w_shift_old <- get_weights(object$list_of_shift_models)
-#             w_shift <- get_weights(object_w$list_of_shift_models[[idx]])
-#             if (length(unlist(w_shift_old)) == length(unlist(w_shift))) {
-#               set_weights(object$list_of_shift_models, w_shift)
-#               break
-#             }
-#           }
-#         }
-#       } else if (nshift >= 2L) {
-#         for (idx in 0:nshift - 1L) {
-#           w_shift_old <- get_weights(object$list_of_shift_models[[idx]])
-#           if (length(object_w$list_of_shift_models) == 1L) {
-#             w_shift <- get_weights(object_w$list_of_shift_models)
-#             if (length(unlist(w_shift_old)) == length(unlist(w_shift))) {
-#               set_weights(object$list_of_shift_models[[idx]], w_shift)
-#               break
-#             }
-#           } else {
-#             for (i in 0:length(object_w$list_of_shift_models) - 1L) {
-#               w_shift <- get_weights(object_w$list_of_shift_models[[i]])
-#               if (length(unlist(w_shift_old)) == length(unlist(w_shift))) {
-#                 set_weights(object$list_of_shift_models[[idx]], w_shift)
-#                 break
-#               }
-#             }
-#           }
-#         }
-#       }
-#     }
-#   }
-#   return(invisible(object))
-# }
-
-# warmstart.k_ontram <- function(object, object_w, which = c("all", "baseline only", "shift only")) {
-#   stopifnot("Polr" %in% class(object_w))
-#   which <- match.arg(which)
-#   K <- object$output_shape[[2]]
-#   n_layers <- length(object$get_weights())
-#   w_new <- get_weights(object)
-#   if (which == "all") {
-#     w_new[[1]] <- matrix(ontram:::.to_gamma(coef(object_w, with_baseline = T)[1:K-1]),
-#                          nrow = 1, ncol = K-1)
-#     if (!is.null(coef(object_w))) {
-#       for (idx in 2:n_layers) { # not optimal
-#         if (ncol(w_new[[idx]]) == 1 && nrow(w_new[[idx]]) == length(coef(object_w))) {
-#           w_new[[idx]] <- matrix(coef(object_w),
-#                                  nrow = length(coef(object_w)), ncol = 1)
-#         }
-#       }
-#     }
-#   } else if (which == "baseline only") {
-#     w_new[[1]] <- matrix(ontram:::.to_gamma(coef(object_w, with_baseline = T)[1:K-1]),
-#                          nrow = 1, ncol = K-1)
-#   }
-#   else if (which == "shift only") {
-#     for (idx in 2:n_layers) {
-#       if (ncol(w_new[[idx]]) == 1 && nrow(w_new[[idx]]) == length(coef(object_w))) {
-#         w_new[[idx]] <- matrix(coef(object_w),
-#                                nrow = length(coef(object_w)), ncol = 1)
-#       }
-#     }
-#   }
-#   object$set_weights(w_new)
-#   return(invisible(object))
-# }
-
-# layer_names <- numeric(length(object$layers))
-# for (idx in 1:length(object$layers)) {
-#   layer_names[idx] <- object$layers[[idx]]$name
-# }
-
-# else if("ontram_k" %in% class(object_w)) {
-#   n_layers <- length(get_weights(object))
-#   # complex intercept, no shift
-#   if ((w_old[[n_layers]] == 0) && (w_old[[n_layers - 1]] == 0)) {
-#     for (idx in 1:(n_layers - 2)) {
-#       w_new$baseline[[idx]] <- get_weights(object_w)[[idx]]
-#     }
-#   }
-#   # complex intercept, linear shift missing
-#   # simple intercept complex shift missing
-# }
-
