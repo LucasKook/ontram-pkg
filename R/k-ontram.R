@@ -126,6 +126,39 @@ k_ontram <- function(
 #   return(m)
 # }
 
+#' Function for estimating the model
+#' @examples
+#' set.seed(2021)
+#' library(tram)
+#' mbl <- k_mod_baseline(5L, name = "baseline")
+#' msh <- mod_shift(2L, name = "linear_shift")
+#' mim <- mod_shift(1L, name = "complex_shift")
+#' m <- k_ontram(mbl, msh)
+#' m2 <- k_ontram(mbl, list(msh, mim))
+#'
+#' data("wine", package = "ordinal")
+#' wine$noise <- rnorm(nrow(wine))
+#' X <- ontram:::.rm_int(model.matrix(~ temp + contact, data = wine))
+#' Z <- ontram:::.rm_int(model.matrix(~ noise, data = wine))
+#' Y <- model.matrix(~ 0 + rating, data = wine)
+#'
+#' loss <- k_ontram_loss(ncol(Y))
+#' compile(m, loss = loss, optimizer = optimizer_adam(learning_rate = 1e-2, decay = 0.001))
+#' fit_k_ontram(m, x = X, y = Y, batch_size = nrow(wine), epoch = 10,
+#'              view_metrics = FALSE)
+#' compile(m2, loss = loss, optimizer = optimizer_adam(learning_rate = 1e-2, decay = 0.001))
+#' fit_k_ontram(m2, x = list(X, Z), y = Y, batch_size = nrow(wine), epoch = 10,
+#'              view_metrics = FALSE)
+#' @export
+fit_k_ontram <- function(object, x, ...) {
+  if (is.list(x)) {
+    x <- c(list(matrix(1, nrow = nrow(x[[1]]))), x)
+  } else {
+    x <- c(list(matrix(1, nrow = nrow(x))), list(x))
+  }
+  fit(object, x = x, ...)
+}
+
 #' Another keras implementation of the ontram loss
 #' @examples
 #' y_true <- k_constant(matrix(c(1, 0, 0, 0, 0), nrow = 1L))

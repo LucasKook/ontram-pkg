@@ -48,17 +48,4 @@ loss(k_constant(Y), m(list(INT, X, Z)))
 
 ## Complex intercept ##
 
-mim2 <- keras_model_sequential() \%>\%
-   layer_dense(units = 4, input_shape = 1L, activation = "relu") \%>\%
-   layer_dense(units = ncol(Y) - 1, use_bias = FALSE)
-
-mbl2 <- k_mod_baseline(ncol(Y), mod_complex = mim2)
-m2 <- k_ontram(mbl2)
-compile(m2, loss = loss, optimizer = optimizer_adam(learning_rate = 1e-2, decay = 0.001))
-fit(m2, x = list(INT, Z), y = Y, batch_size = nrow(wine), epoch = 10,
-    view_metrics = FALSE)
-
-get_weights(m2$mod_baseline[[0]])
-warmstart(m2, tm, "baseline only")
-get_weights(m2$mod_baseline[[0]])
 }
