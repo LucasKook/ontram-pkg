@@ -155,15 +155,26 @@ k_ontram <- function(
 #' fit_k_ontram(m2, x = list(X, Z), y = Y, batch_size = nrow(wine), epoch = 10,
 #'              view_metrics = FALSE)
 #' @export
-fit_k_ontram <- function(object, x, ...) {
+fit_k_ontram <- function(object, x, validation_data = NULL, ...) {
   if (!("k_ontram_rv" %in% class(object))) {
     if (is.list(x)) {
       x <- c(list(matrix(1, nrow = nrow(x[[1]]))), x)
     } else {
       x <- c(list(matrix(1, nrow = nrow(x))), list(x))
     }
-    fit(object, x = x, ...)
+    if (!is.null(validation_data)) {
+      if (is.list(validation_data[[1]])) {
+        validation_data <- list(c(list(matrix(1, nrow = nrow(validation_data[[2]]))),
+                                  validation_data[[1]]),
+                                validation_data[[2]])
+      } else {
+        validation_data <- list(c(list(matrix(1, nrow = nrow(validation_data[[2]]))),
+                                  list(validation_data[[1]])),
+                                validation_data[[2]])
+      }
+    }
   }
+    fit(object, x = x, validation_data = validation_data, ...)
 }
 
 #' Another keras implementation of the ontram loss

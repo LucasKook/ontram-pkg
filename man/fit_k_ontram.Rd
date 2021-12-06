@@ -4,7 +4,7 @@
 \alias{fit_k_ontram}
 \title{Function for estimating the model}
 \usage{
-fit_k_ontram(object, x, ...)
+fit_k_ontram(object, x, validation_data = NULL, ...)
 }
 \description{
 Function for estimating the model
