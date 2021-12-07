@@ -341,7 +341,7 @@ simulate.k_ontram <- function(object, x, nsim = 1, levels = NULL, seed = NULL) {
 #' @export
 warmstart.k_ontram <- function(object, object_w, which = c("all", "baseline only", "shift only")) {
   which <- match.arg(which)
-  K <- object$output_shape[[2L]]
+  K <- object$mod_baseline$output_shape[[2L]] + 1
   nshift <- length(object$list_of_shift_models)
   if ("tram" %in% class(object_w)) {
     if (which == "all" || which == "baseline only") {
