@@ -296,6 +296,12 @@ simulate.k_ontram <- function(object, x, nsim = 1, levels = NULL, seed = NULL) {
 #' @method warmstart k_ontram
 #' @param object an object of class \code{\link{k_ontram}}.
 #' @param object_w an object of class \code{\link[tram]{Polr}} or \code{\link{k_ontram}} from which weights are taken.
+#' @section Notes:
+#' \itemize{
+#' \item{For models of class \code{k_ontram_rv} the biases of the last layer are set to the intercepts of the \code{\link[tram]{Polr}} model
+#' if \code{which} is set to "baseline_only" or "all".}
+#' \item{The warmstarted model has to be assigned to a new variable.}
+#' }
 #' @examples
 #' library(tram)
 #' set.seed(2021)
@@ -313,7 +319,7 @@ simulate.k_ontram <- function(object, x, nsim = 1, levels = NULL, seed = NULL) {
 #'   layer_dense(units = 16, activation = "relu") %>%
 #'   layer_dense(units = 1, use_bias = FALSE)
 #' mo <- k_ontram(mbl, list(msh, mim))
-#' warmstart(mo, mod_polr, which = "baseline only")
+#' mo <- warmstart(mo, mod_polr, which = "baseline only") # object: k_ontram, object_w = Polr
 #'
 #' compile(mo, loss = loss, optimizer = optimizer_adam(learning_rate = 1e-2))
 #' fit(mo, x = list(matrix(1, nrow = nrow(wine)), x, im), y = y)
@@ -323,7 +329,15 @@ simulate.k_ontram <- function(object, x, nsim = 1, levels = NULL, seed = NULL) {
 #'   layer_dense(units = 16, activation = "relu") %>%
 #'   layer_dense(units = 1, use_bias = FALSE)
 #' mo2 <- k_ontram(mbl2, mim2)
-#' warmstart(mo2, mo, which = "all")
+#' mo2 <- warmstart(mo2, mo, which = "all")  # object: k_ontram, object_w = k_ontram
+#'
+#' mbl3 <- keras_model_sequential() %>%
+#'   layer_dense(units = 8, input_shape = 1L, activation = "relu") %>%
+#'   layer_dense(units = 16, activation = "relu") %>%
+#'   layer_dense(units = ncol(y) - 1, use_bias = FALSE) %>%
+#'   layer_trafo_intercept()()
+#' mo3 <- k_ontram(mbl3, msh, response_varying = TRUE)
+#' mo3 <- warmstart(mo3, mod_polr, "all") # object: k_ontram_rv, object_w = Polr
 #' @export
 warmstart.k_ontram <- function(object, object_w, which = c("all", "baseline only", "shift only")) {
   which <- match.arg(which)
@@ -333,7 +347,27 @@ warmstart.k_ontram <- function(object, object_w, which = c("all", "baseline only
     if (which == "all" || which == "baseline only") {
       w_baseline <- list(matrix(ontram:::.to_gamma(coef(object_w, with_baseline = T)[1:K-1]),
                                 nrow = 1, ncol = K-1))
-      set_weights(object$mod_baseline, w_baseline)
+      if (!("k_ontram_rv" %in% class(object))) {
+        set_weights(object$mod_baseline, w_baseline)
+      } else if ("k_ontram_rv" %in% class(object)) {
+        bias_fixed <- function(x) {
+          k_constant(gammas)
+        }
+        thetas <- coef(object_w, with_baseline = TRUE)[1:K-1]
+        gammas <- k_constant(.to_gamma(thetas))
+        pop_layer(object$mod_baseline) # remove lambda layer
+        ll <- length(object$mod_baseline$layers)
+        ll_activation <- object$mod_baseline$layers[[ll]]$activation
+        pop_layer(object$mod_baseline) # remove last layer
+        mbl_new <- clone_model(object$mod_baseline) # otherwise weights don't train
+        mbl_new <- mbl_new %>% # add last layer
+          layer_dense(units = K - 1, use_bias = TRUE,
+                      activation = ll_activation,
+                      bias_initializer = initializer_constant(gammas),
+                      bias_constraint = bias_fixed) %>%
+          layer_trafo_intercept()() # add lambda layer
+        object <- k_ontram(mbl_new, object$list_of_shift_models, response_varying = TRUE)
+      }
     }
     if (which == "all" || which == "shift only") {
       if (!is.null(coef(object_w))) {

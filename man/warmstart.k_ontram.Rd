@@ -14,6 +14,15 @@
 \description{
 Set initial weights
 }
+\section{Notes}{
+
+\itemize{
+\item{For models of class \code{k_ontram_rv} the biases of the last layer are set to the intercepts of the \code{\link[tram]{Polr}} model
+if \code{which} is set to "baseline_only" or "all".}
+\item{The warmstarted model has to be assigned to a new variable.}
+}
+}
+
 \examples{
 library(tram)
 set.seed(2021)
@@ -31,7 +40,7 @@ mim <- keras_model_sequential() \%>\%
   layer_dense(units = 16, activation = "relu") \%>\%
   layer_dense(units = 1, use_bias = FALSE)
 mo <- k_ontram(mbl, list(msh, mim))
-warmstart(mo, mod_polr, which = "baseline only")
+mo <- warmstart(mo, mod_polr, which = "baseline only") # object: k_ontram, object_w = Polr
 
 compile(mo, loss = loss, optimizer = optimizer_adam(learning_rate = 1e-2))
 fit(mo, x = list(matrix(1, nrow = nrow(wine)), x, im), y = y)
@@ -41,5 +50,13 @@ mim2 <- keras_model_sequential() \%>\%
   layer_dense(units = 16, activation = "relu") \%>\%
   layer_dense(units = 1, use_bias = FALSE)
 mo2 <- k_ontram(mbl2, mim2)
-warmstart(mo2, mo, which = "all")
+mo2 <- warmstart(mo2, mo, which = "all")  # object: k_ontram, object_w = k_ontram
+
+mbl3 <- keras_model_sequential() \%>\%
+  layer_dense(units = 8, input_shape = 1L, activation = "relu") \%>\%
+  layer_dense(units = 16, activation = "relu") \%>\%
+  layer_dense(units = ncol(y) - 1, use_bias = FALSE) \%>\%
+  layer_trafo_intercept()()
+mo3 <- k_ontram(mbl3, msh, response_varying = TRUE)
+mo3 <- warmstart(mo3, mod_polr, "all") # object: k_ontram_rv, object_w = Polr
 }
