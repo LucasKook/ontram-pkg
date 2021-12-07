@@ -358,7 +358,7 @@ warmstart.k_ontram <- function(object, object_w, which = c("all", "baseline only
           k_constant(gammas)
         }
         thetas <- coef(object_w, with_baseline = TRUE)[1:K-1]
-        gammas <- k_constant(ontram:::.to_gamma(thetas))
+        gammas <- ontram:::.to_gamma(thetas)
         pop_layer(object$mod_baseline) # remove lambda layer
         ll <- length(object$mod_baseline$layers)
         ll_activation <- object$mod_baseline$layers[[ll]]$activation
