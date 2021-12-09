@@ -7,7 +7,7 @@
 k_ontram(
   mod_baseline,
   list_of_shift_models = NULL,
-  response_varying = FALSE,
+  complex_intercept = FALSE,
   ...
 )
 }

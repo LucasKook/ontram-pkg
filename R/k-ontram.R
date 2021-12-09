@@ -55,7 +55,7 @@
 k_ontram <- function(
   mod_baseline,
   list_of_shift_models = NULL,
-  response_varying = FALSE,
+  complex_intercept = FALSE,
   ...
 ) {
   if (is.null(list_of_shift_models)) {
@@ -78,8 +78,8 @@ k_ontram <- function(
   m <- keras_model(inputs = inputs, outputs = layer_concatenate(outputs))
   m$mod_baseline <- mod_baseline
   m$list_of_shift_models <- list_of_shift_models
-  if (response_varying) {
-    class(m) <- c("k_ontram", "k_ontram_rv", class(m))
+  if (complex_intercept) {
+    class(m) <- c("k_ontram_ci", "k_ontram", class(m))
   } else {
     class(m) <- c("k_ontram", class(m))
   }
@@ -110,7 +110,7 @@ k_ontram <- function(
 #'              view_metrics = FALSE)
 #' @export
 fit_k_ontram <- function(object, x, validation_data = NULL, ...) {
-  if (!("k_ontram_rv" %in% class(object))) {
+  if (!("k_ontram_ci" %in% class(object))) {
     if (is.list(x)) {
       x <- c(list(matrix(1, nrow = nrow(x[[1]]))), x)
     } else {
@@ -213,7 +213,7 @@ predict.k_ontram <- function(object, x,
                                       "survivor", "odds"),
                              ...) {
   type <- match.arg(type)
-  if ("k_ontram_rv" %in% class(object)) {
+  if ("k_ontram_ci" %in% class(object)) {
     class(object) <- class(object)[-2L]
   } else {
     class(object) <- class(object)[-1L]
@@ -295,13 +295,8 @@ simulate.k_ontram <- function(object, x, nsim = 1, levels = NULL, seed = NULL) {
 #' Set initial weights
 #' @method warmstart k_ontram
 #' @param object an object of class \code{\link{k_ontram}}.
-#' @param object_w an object of class \code{\link[tram]{Polr}} or \code{\link{k_ontram}} from which weights are taken.
-#' @section Notes:
-#' \itemize{
-#' \item{For models of class \code{k_ontram_rv} the biases of the last layer are set to the intercepts of the \code{\link[tram]{Polr}} model
-#' if \code{which} is set to "baseline_only" or "all".}
-#' \item{The warmstarted model has to be assigned to a new variable.}
-#' }
+#' @param thetas intercepts of a \code{\link[tram]{Polr}} model as a vector (used to initialize the weights of the baseline model).
+#' @param betas shift terms of a \code{\link[tram]{Polr}} model as a vector (used to initialize the weights of the simple shift model).
 #' @examples
 #' library(tram)
 #' set.seed(2021)
@@ -319,117 +314,98 @@ simulate.k_ontram <- function(object, x, nsim = 1, levels = NULL, seed = NULL) {
 #'   layer_dense(units = 16, activation = "relu") %>%
 #'   layer_dense(units = 1, use_bias = FALSE)
 #' mo <- k_ontram(mbl, list(msh, mim))
-#' mo <- warmstart(mo, mod_polr, which = "baseline only") # object: k_ontram, object_w = Polr
-#'
-#' compile(mo, loss = loss, optimizer = optimizer_adam(learning_rate = 1e-2))
-#' fit(mo, x = list(matrix(1, nrow = nrow(wine)), x, im), y = y)
-#' mbl2 <- k_mod_baseline(ncol(y))
-#' mim2 <- keras_model_sequential() %>%
-#'   layer_dense(units = 8, input_shape = 1L, activation = "relu") %>%
-#'   layer_dense(units = 16, activation = "relu") %>%
-#'   layer_dense(units = 1, use_bias = FALSE)
-#' mo2 <- k_ontram(mbl2, mim2)
-#' mo2 <- warmstart(mo2, mo, which = "all")  # object: k_ontram, object_w = k_ontram
-#'
-#' mbl3 <- keras_model_sequential() %>%
-#'   layer_dense(units = 8, input_shape = 1L, activation = "relu") %>%
-#'   layer_dense(units = 16, activation = "relu") %>%
-#'   layer_dense(units = ncol(y) - 1, use_bias = FALSE) %>%
-#'   layer_trafo_intercept()()
-#' mo3 <- k_ontram(mbl3, msh, response_varying = TRUE)
-#' mo3 <- warmstart(mo3, mod_polr, "all") # object: k_ontram_rv, object_w = Polr
+#' mo <- warmstart(mo, thetas = coef(mod_polr, with_baseline = T)[1:4L],
+#'                 which = "baseline only")
 #' @export
-warmstart.k_ontram <- function(object, object_w, which = c("all", "baseline only", "shift only")) {
+warmstart.k_ontram <- function(object, thetas = NULL, betas = NULL,
+                               which = c("all", "baseline only", "shift only")) {
   which <- match.arg(which)
-  if (!("k_ontram_rv" %in% class(object))) {
-    K <- object$mod_baseline$output_shape[[2L]] + 1
-  } else if ("k_ontram_rv" %in% class(object)) {
-    K <- object$output_shape[[2L]]
-  }
+  K <- object$mod_baseline$output_shape[[2L]] + 1
   nshift <- length(object$list_of_shift_models)
-  if ("tram" %in% class(object_w)) {
-    if (which == "all" || which == "baseline only") {
-      w_baseline <- list(matrix(ontram:::.to_gamma(coef(object_w, with_baseline = T)[1:K-1]),
-                                nrow = 1, ncol = K-1))
-      if (!("k_ontram_rv" %in% class(object))) {
-        set_weights(object$mod_baseline, w_baseline)
-      } else if ("k_ontram_rv" %in% class(object)) {
-        bias_fixed <- function(x) {
-          k_constant(gammas)
-        }
-        thetas <- coef(object_w, with_baseline = TRUE)[1:K-1]
-        gammas <- ontram:::.to_gamma(thetas)
-        pop_layer(object$mod_baseline) # remove lambda layer
-        ll <- length(object$mod_baseline$layers)
-        ll_activation <- object$mod_baseline$layers[[ll]]$activation
-        pop_layer(object$mod_baseline) # remove last layer
-        mbl_new <- clone_model(object$mod_baseline) # otherwise weights don't train
-        mbl_new <- mbl_new %>% # add last layer
-          layer_dense(units = K - 1, use_bias = TRUE,
-                      activation = ll_activation,
-                      bias_initializer = initializer_constant(gammas),
-                      bias_constraint = bias_fixed) %>%
-          layer_trafo_intercept()() # add lambda layer
-        object <- k_ontram(mbl_new, object$list_of_shift_models, response_varying = TRUE)
-      }
-    }
-    if (which == "all" || which == "shift only") {
-      if (!is.null(coef(object_w))) {
-        w_shift <- list(matrix(coef(object_w),
-                               nrow = length(coef(object_w)), ncol = 1))
-        if (nshift == 1L) {
-          set_weights(object$list_of_shift_models, w_shift)
-        } else if (nshift >= 2L) {
-          for (idx in 0:nshift - 1L) {
-            if (nrow(get_weights(object$list_of_shift_models[[idx]])[[1]]) == nrow(w_shift[[1]])) {
-              set_weights(object$list_of_shift_models[[idx]], w_shift)
-              break
-            }
-          }
-        }
-      }
-    }
-  } else if ("k_ontram" %in% class(object_w)) {
-    if (which == "all" || which == "baseline only") {
-      w_baseline <- get_weights(object_w$mod_baseline)
-      set_weights(object$mod_baseline, w_baseline)
-    }
-    if (which == "all" || which == "shift only"){
-      if (nshift == 1L) {
-        if (length(object_w$list_of_shift_models) == 1L) {
-          w_shift <- get_weights(object_w$list_of_shift_models)
-          set_weights(object$list_of_shift_models, w_shift)
-        } else {
-          for (idx in 0:length(object_w$list_of_shift_models) - 1L) {
-            w_shift_old <- get_weights(object$list_of_shift_models)
-            w_shift <- get_weights(object_w$list_of_shift_models[[idx]])
-            if (length(unlist(w_shift_old)) == length(unlist(w_shift))) {
-              set_weights(object$list_of_shift_models, w_shift)
-              break
-            }
-          }
-        }
-      } else if (nshift >= 2L) {
-        for (idx in 0:nshift - 1L) {
-          w_shift_old <- get_weights(object$list_of_shift_models[[idx]])
-          if (length(object_w$list_of_shift_models) == 1L) {
-            w_shift <- get_weights(object_w$list_of_shift_models)
-              if (length(unlist(w_shift_old)) == length(unlist(w_shift))) {
-                set_weights(object$list_of_shift_models[[idx]], w_shift)
-                break
-              }
-          } else {
-              for (i in 0:length(object_w$list_of_shift_models) - 1L) {
-                w_shift <- get_weights(object_w$list_of_shift_models[[i]])
-                if (length(unlist(w_shift_old)) == length(unlist(w_shift))) {
-                  set_weights(object$list_of_shift_models[[idx]], w_shift)
-                  break
-                }
-              }
-          }
+  if (which == "all" || which == "baseline only") {
+    gammas <- list(matrix(.to_gamma(thetas), nrow = 1, ncol = K-1))
+    set_weights(object$mod_baseline, gammas)
+  }
+  if (which == "all" || which == "shift only") {
+  betas <- list(matrix(betas, nrow = length(betas), ncol = 1))
+    if (nshift == 1L) {
+      set_weights(object$list_of_shift_models, betas)
+    } else if (nshift >= 2L) {
+      for (idx in 0:nshift - 1L) {
+        if (nrow(get_weights(object$list_of_shift_models[[idx]])[[1]]) == nrow(betas[[1]])) {
+          set_weights(object$list_of_shift_models[[idx]], betas)
+          break
         }
       }
     }
   }
   return(invisible(object))
 }
+
+#' Set initial weights
+#' @param thetas intercepts of a \code{\link[tram]{Polr}} model as a vector (are added to the last layer during training).
+#' @param betas shift terms of a \code{\link[tram]{Polr}} model as a vector (used to initialize the weights of the simple shift model).
+#' @section IMPORTANT:
+#' \itemize{
+#' \item{The warmstarted model has to be assigned to a new variable.}
+#' }
+#' @examples
+#' library(tram)
+#' set.seed(2021)
+#' data(wine, package = "ordinal")
+#' wine$noise <- rnorm(nrow(wine))
+#' y <- model.matrix(~ 0 + rating, data = wine)
+#' x <- ontram:::.rm_int(model.matrix(rating ~ temp + contact, data = wine))
+#' im <- ontram:::.rm_int(model.matrix(rating ~ noise, data = wine))
+#' loss <- k_ontram_loss(ncol(y))
+#' mbl <- keras_model_sequential() %>%
+#'   layer_dense(units = 8, input_shape = 1L, activation = "relu") %>%
+#'   layer_dense(units = 16, activation = "relu") %>%
+#'   layer_dense(units = ncol(y) - 1, use_bias = FALSE) %>%
+#'   layer_trafo_intercept()()
+#' mo <- k_ontram(mbl, msh, complex_intercept = TRUE)
+#' mo <- warmstart(mo, thetas = coef(mod_polr, with_baseline = TRUE)[1:4L],
+#'                 betas = coef(mod_polr), which = "all")
+#' @export
+warmstart.k_ontram_ci <- function(object, thetas = NULL, betas = NULL,
+                                  which = c("all", "baseline only", "shift only")) {
+  which <- match.arg(which)
+  K <- object$output_shape[[2L]]
+  nshift <- length(object$list_of_shift_models)
+  if (which == "all" || which == "baseline only") {
+    gammas <- .to_gamma(thetas)
+    mbl_copy <- clone_model(object$mod_baseline)
+    pop_layer(mbl_copy) # remove lambda layer
+    ll <- length(mbl_copy$layers)
+    ll_activation <- mbl_copy$layers[[ll]]$activation
+    mbl_new <- mbl_copy %>%
+      layer_add_gamma_tilde(gammas)() %>% # add gammas
+      layer_trafo_intercept()()
+    object <- k_ontram(mbl_new, object$list_of_shift_models,
+                       complex_intercept = TRUE)
+  }
+  if (which == "all" || which == "shift only") {
+   betas <- list(matrix(betas, nrow = length(betas), ncol = 1))
+    if (nshift == 1L) {
+      set_weights(object$list_of_shift_models, betas)
+    } else if (nshift >= 2L) {
+      for (idx in 0:nshift - 1L) {
+        if (nrow(get_weights(object$list_of_shift_models[[idx]])[[1]]) == nrow(betas[[1]])) {
+          set_weights(object$list_of_shift_models[[idx]], betas)
+          break
+        }
+      }
+    }
+  }
+  return(invisible(object))
+}
+
+layer_add_gamma_tilde <- function(gammas) {
+  gammas <- k_constant(gammas)
+  tf$keras$layers$Lambda(
+    function(x) {
+      tf$math$add(x, gammas)
+    }
+  )
+}
+
