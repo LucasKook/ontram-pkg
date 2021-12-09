@@ -11,7 +11,11 @@
 #' @examples
 #' .to_gamma(.to_theta(c(-1, 1, 1)))
 .to_gamma <- function(thetas) {
-  return(c(thetas[1L], log(diff(thetas))))
+  gammas <- c(thetas[1L], log(diff(thetas)))
+  if(any(is.nan(gammas))) {
+    gammas[is.nan(gammas)] <- 1e-20
+  }
+
 }
 
 #' @importFrom tensorflow tf

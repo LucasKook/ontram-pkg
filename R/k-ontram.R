@@ -141,7 +141,7 @@ fit_k_ontram <- function(object, x, validation_data = NULL, ...) {
 #' @export
 k_ontram_loss <- function(K) {
   function(y_true, y_pred) {
-    intercepts <- y_pred[, 1L:(K - 1L), drop = TRUE]
+    intercepts <- y_pred[, 1L:(K - 1L), drop = FALSE]
     shifts <- y_pred[, K, drop = TRUE]
     yu <- y_true[, 1L:(K - 1L), drop = FALSE]
     yl <- y_true[, 2L:K, drop = FALSE]
@@ -151,7 +151,7 @@ k_ontram_loss <- function(K) {
     tK <- y_true[, K, drop = TRUE]
     lik <- t1 * k_sigmoid(upr) + tK * (1 - k_sigmoid(lwr)) +
       (1 - t1) * (1 - tK) * (k_sigmoid(upr) - k_sigmoid(lwr))
-    - k_sum(k_log(lik))
+    - k_mean(k_log(lik))
   }
 }
 
