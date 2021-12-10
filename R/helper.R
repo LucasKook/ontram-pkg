@@ -15,7 +15,7 @@
   if(any(is.nan(gammas))) {
     gammas[is.nan(gammas)] <- 1e-20
   }
-
+  return(gammas)
 }
 
 #' @importFrom tensorflow tf
