@@ -94,6 +94,21 @@ k_ontram_loss <- function(K) {
   }
 }
 
+#' CRPS loss
+#' @examples
+#' rps_loss <- k_ontram_rps(ncol(Y))
+#' @export
+k_ontram_rps <- function(K) {
+  function(y_true, y_pred) {
+    intercepts <- y_pred[, 1L:(K - 1L), drop = FALSE]
+    shifts <- y_pred[, K, drop = FALSE]
+    y_cum <- tf$cumsum(y_true, axis = 1L)
+    cdf <- k_sigmoid(intercepts - shifts)
+    briers <- (cdf - y_cum[, 1L:(K - 1L), drop = FALSE])^2
+    k_mean(k_mean(briers, axis = 1L))
+  }
+}
+
 #' Layer for transforming raw intercepts
 #' @examples
 #' layer_trafo_intercept()
