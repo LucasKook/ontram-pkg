@@ -148,11 +148,11 @@ predict.k_ontram <- function(object, x,
     class(object) <- class(object)[-2L]
   } else {
     class(object) <- class(object)[-1L]
-    if (is.list(x)) {
-      x <- c(list(matrix(1, nrow = nrow(x[[1]]))), x)
-    } else {
-      x <- c(list(matrix(1, nrow = nrow(x))), list(x))
-    }
+    # if (is.list(x)) {
+    #   x <- c(list(matrix(1, nrow = nrow(x[[1]]))), x)
+    # } else {
+    #   x <- c(list(matrix(1, nrow = nrow(x))), list(x))
+    # }
   }
   preds <- predict(object, x = x, ... = ...)
   K <- ncol(preds)
