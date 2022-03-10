@@ -4,13 +4,19 @@
 \alias{k_ontram}
 \title{Keras interface to ONTRAMs}
 \usage{
-k_ontram(mod_baseline, list_of_shift_models, ...)
+k_ontram(
+  mod_baseline,
+  list_of_shift_models = NULL,
+  complex_intercept = FALSE,
+  ...
+)
 }
 \description{
 Keras interface to ONTRAMs
 }
 \examples{
 library(tram)
+set.seed(2021)
 mbl <- k_mod_baseline(5L, name = "baseline")
 msh <- mod_shift(2L, name = "linear_shift")
 mim <- mod_shift(1L, name = "complex_shift")
@@ -25,6 +31,7 @@ INT <- matrix(1, nrow = nrow(wine))
 
 m(list(INT, X, Z))
 loss <- k_ontram_loss(ncol(Y))
+compile(m, loss = loss, optimizer = optimizer_adam(learning_rate = 1e-2, decay = 0.001))
 cent <- metric_ontram_crossent(ncol(Y))
 compile(m, loss = loss, optimizer = optimizer_adam(lr = 1e-2, decay = 0.001),
 metrics = c(cent))
@@ -45,6 +52,7 @@ tmp[[3]][] <- coef(tm)[3]
 set_weights(m, tmp)
 
 loss(k_constant(Y), m(list(INT, X, Z)))
+- logLik(tm)
 - logLik(tm) / nrow(wine)
 
 }

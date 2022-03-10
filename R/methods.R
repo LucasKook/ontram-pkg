@@ -110,7 +110,7 @@ plot.ontram_history <- function(object, col_train = "blue", col_test = "red", ad
 #' fit_ontram(mo, x_train = x_train, y_train = y_train)
 #' simulate(mo, nsim = 1, x = x_valid, y = y_valid)
 #' @export
-simulate.ontram <- function(object, nsim = 1, seed = NULL, x = NULL, y, im = NULL, levels = 1:ncol(y), ...) {
+simulate.ontram <- function(object, nsim = 1, x = NULL, y, im = NULL, levels = 1:ncol(y), seed = NULL, ...) {
   if (!is.null(seed)) {
     set.seed(seed)
   }
@@ -130,14 +130,14 @@ simulate.ontram <- function(object, nsim = 1, seed = NULL, x = NULL, y, im = NUL
 
 # generic function
 #' @export
-warm_start <- function(model, ...) {
-  UseMethod("warm_start")
+warmstart <- function(object, ...) {
+  UseMethod("warmstart")
 }
 
 #' Set initial weights
-#' @method warm_start ontram
-#' @param model an object of class \code{\link{ontram}}.
-#' @param tram an object of class \code{\link[tram]{tram}} from which model weights are taken.
+#' @method warmstart ontram
+#' @param object an object of class \code{\link{ontram}}.
+#' @param object_w an object of class \code{\link[tram]{Polr}} from which model weights are taken.
 #' @examples
 #' library(tram)
 #' data("wine", package = "ordinal")
@@ -147,38 +147,38 @@ warm_start <- function(model, ...) {
 #' mp <- Polr(fml, data = wine)
 #' mo <- ontram_polr(x_dim = ncol(x_train), y_dim = ncol(y_train))
 #' coef(mp, with_baseline = T)
-#' warm_start(mo, mp, "all")
+#' warmstart(mo, mp, "all")
 #' mod_weights(mo)
 #' @export
-warm_start.ontram <- function(model, tram, which = c("all", "baseline only", "shift only")) {
+warmstart.ontram <- function(object, object_w, which = c("all", "baseline only", "shift only")) {
   stopifnot(which %in% c("all", "baseline only", "shift only"))
-  K <- model$y_dim
-  x_dim <- model$x_dim
+  K <- object$y_dim
+  x_dim <- object$x_dim
   w <- vector(mode = "list", length = 2)
   names(w) <- c("w_baseline", "w_shift")
-  w$w_baseline <- list(matrix(coef(tram, with_baseline = T)[1:K-1],
+  w$w_baseline <- list(matrix(ontram:::.to_gamma(coef(object_w, with_baseline = T)[1:K-1]),
                               nrow = 1, ncol = K-1))
-  if (!is.null(coef(tram))) {
-    w$w_shift <- list(matrix(coef(tram),
+  if (!is.null(coef(object_w))) {
+    w$w_shift <- list(matrix(coef(object_w),
                              nrow = x_dim, ncol = 1))
   }
   if (which %in% "baseline only") {
-    model$mod_baseline$set_weights(w$w_baseline)
+    object$mod_baseline$set_weights(w$w_baseline)
   }
   if (which %in% "shift only") {
-    model$mod_shift$set_weights(w$w_shift)
+    object$mod_shift$set_weights(w$w_shift)
   }
   if (which %in% "all") {
-    model$mod_baseline$set_weights(w$w_baseline)
-    model$mod_shift$set_weights(w$w_shift)
+    object$mod_baseline$set_weights(w$w_baseline)
+    object$mod_shift$set_weights(w$w_shift)
   }
-  return(invisible(model))
+  return(invisible(object))
 }
 
 #' Set initial weights
-#' @method warm_start ontram_rv
-#' @param model an object of class \code{ontram_rv}.
-#' @param model_w an object of class \code{\link[tram]{tram}}, \code{ontram_rv} or \code{\link{ontram}}
+#' @method warmstart ontram_rv
+#' @param object an object of class \code{ontram_rv}.
+#' @param object_w an object of class \code{\link[tram]{Polr}}, \code{ontram_rv} or \code{\link{ontram}}
 #' from which model weights are taken.
 #' @examples
 #' library(tram)
@@ -208,52 +208,52 @@ warm_start.ontram <- function(model, tram, which = c("all", "baseline only", "sh
 #'                  x_dim = ncol(x_train), y_dim = ncol(y_train),
 #'                  response_varying = TRUE)
 #' mod_weights(mo_rv2)
-#' warm_start(mo_rv2, mo_rv1, "baseline only")
+#' warmstart(mo_rv2, mo_rv1, "baseline only")
 #' mod_weights(mo_rv2)
 #' coef(mp)
-#' warm_start(mo_rv2, mp, "shift only")
+#' warmstart(mo_rv2, mp, "shift only")
 #' mod_weights(mo_rv2)
 
 #' @export
-warm_start.ontram_rv <- function(model, model_w, which = c("all", "baseline only", "shift only")) {
+warmstart.ontram_rv <- function(object, object_w, which = c("all", "baseline only", "shift only")) {
   stopifnot(which %in% c("all", "baseline only", "shift only"))
-  if (identical(mod_weights(model), mod_weights(model_w))) {
-    stop("`model` and `model_w` are identical.")
+  if (identical(mod_weights(object), mod_weights(object_w))) {
+    stop("`object` and `object_w` are identical.")
   }
-  K <- model$y_dim
-  x_dim <- model$x_dim
+  K <- object$y_dim
+  x_dim <- object$x_dim
   w <- vector(mode = "list", length = 2)
   names(w) <- c("w_baseline", "w_shift")
-  if ("tram" %in% class(model_w)) {
-    w$w_shift <- list(matrix(coef(model_w),
+  if ("tram" %in% class(object_w)) {
+    w$w_shift <- list(matrix(coef(object_w),
                              nrow = x_dim, ncol = 1))
     if (which %in% "baseline only") {
-      stop("If which = `baseline only` model_w must be of class `ontram_rv`.")
+      stop("If which = `baseline only` object_w must be of class `ontram_rv`.")
     }
     if (which %in% "shift only") {
-      model$mod_shift$set_weights(w$w_shift)
+      object$mod_shift$set_weights(w$w_shift)
     }
     if (which %in% "all") {
-      stop("If which = `all` model_w must be of class `ontram_rv`.")
+      stop("If which = `all` object_w must be of class `ontram_rv`.")
     }
   }
-  if ("ontram" %in% class(model_w)) {
-    w$w_baseline <- model_w$mod_baseline$get_weights()
-    if (!is.null(model_w$mod_shift)) {
-      w$w_shift <- model_w$mod_shift$get_weights()
+  if ("ontram" %in% class(object_w)) {
+    w$w_baseline <- object_w$mod_baseline$get_weights()
+    if (!is.null(object_w$mod_shift)) {
+      w$w_shift <- object_w$mod_shift$get_weights()
     }
     if (which %in% "baseline only") {
-      model$mod_baseline$set_weights(w$w_baseline)
+      object$mod_baseline$set_weights(w$w_baseline)
     }
     if (which %in% "shift only") {
-      model$mod_shift$set_weights(w$w_shift)
+      object$mod_shift$set_weights(w$w_shift)
     }
     if (which %in% "all") {
-      model$mod_baseline$set_weights(w$w_baseline)
-      model$mod_shift$set_weights(w$w_shift)
+      object$mod_baseline$set_weights(w$w_baseline)
+      object$mod_shift$set_weights(w$w_shift)
     }
   }
-  return(invisible(model))
+  return(invisible(object))
 }
 
 # generic function

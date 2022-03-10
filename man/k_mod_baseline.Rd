@@ -2,14 +2,10 @@
 % Please edit documentation in R/k-ontram.R
 \name{k_mod_baseline}
 \alias{k_mod_baseline}
-\title{keras mbl}
+\title{Baseline model}
 \usage{
 k_mod_baseline(K, ...)
 }
 \description{
-keras mbl
-}
-\examples{
-mbl <- k_mod_baseline(5)
-mbl(matrix(1))
+Baseline model
 }

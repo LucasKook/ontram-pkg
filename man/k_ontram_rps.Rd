@@ -5,10 +5,15 @@
 \title{CRPS loss}
 \usage{
 k_ontram_rps(K)
+
+k_ontram_rps(K)
 }
 \description{
 CRPS loss
+
+RPS loss
 }
 \examples{
+rps_loss <- k_ontram_rps(ncol(Y))
 rps_loss <- k_ontram_rps(ncol(Y))
 }

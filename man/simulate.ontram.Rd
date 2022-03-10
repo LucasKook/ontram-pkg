@@ -7,11 +7,11 @@
 \method{simulate}{ontram}(
   object,
   nsim = 1,
-  seed = NULL,
   x = NULL,
   y,
   im = NULL,
   levels = 1:ncol(y),
+  seed = NULL,
   ...
 )
 }

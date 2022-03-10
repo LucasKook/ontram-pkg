@@ -2,13 +2,10 @@
 % Please edit documentation in R/k-ontram.R
 \name{layer_trafo_intercept}
 \alias{layer_trafo_intercept}
-\title{Layer for transforming raw intercepts}
+\title{Layer for transforming raw intercepts using softplus function}
 \usage{
 layer_trafo_intercept()
 }
 \description{
-Layer for transforming raw intercepts
-}
-\examples{
-layer_trafo_intercept()
+Layer for transforming raw intercepts using softplus function
 }
