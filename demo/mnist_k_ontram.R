@@ -39,7 +39,7 @@ mim <-  keras_model_sequential() %>%
 m <- k_ontram(mbl, mim)
 
 loss <- k_ontram_loss(ncol(y_train))
-compile(m, loss = loss, optimizer = optimizer_adam(lr = 1e-4))
+compile(m, loss = loss, optimizer = optimizer_adam(learning_rate = 1e-4))
 fit(m, x = list(matrix(1, nrow(y_train)), x_train),
     y = y_train, validation_split = 0.3, epoch = 5, batch_size = 32)
 
