@@ -1,4 +1,5 @@
 library(testthat)
-library(ontram)
+
+devtools::load_all("../../")
 
 test_check("ontram")

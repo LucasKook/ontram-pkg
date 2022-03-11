@@ -1,3 +1,14 @@
+#' S3 methods for \code{k_ontram}
+#' @param object object of class \code{k_ontram}
+#' @param which optional name of layer for which to return coefficients
+#' @method coef k_ontram
+#' @export
+coef.k_ontram <- function(object, which = NULL, ...) {
+  if (!is.null(which))
+    return(get_weights_by_name(object, which))
+  get_weights(m)
+}
+
 
 #' S3 methods for \code{k_ontram}
 #' @method predict k_ontram
