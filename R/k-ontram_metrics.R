@@ -158,7 +158,6 @@ metric_cqwk <- function(K, p = 2L) {
 #' Discrete qwk
 #' @examples
 #' k_qwk <- k_ontram_qwk(ncol(Y))
-#' debugonce(k_qwk)
 #' k_qwk(k_constant(Y), m(list(INT, X, Z)))
 #' k_qwk(k_constant(Y), m$output)
 #' @export
@@ -183,8 +182,10 @@ k_ontram_qwk <- function(K, p = 2L) {
       k_reshape(predicted_margin, shape = c(1L, predicted_margin$shape[[1L]]))
     ) / y_true$shape[[1L]]
 
-    (k_sum(weights * cmat) - k_sum(weights * expected_cmat)) /
-      (1 - k_sum(weights * expected_cmat))
+    # (k_sum(weights * cmat) - k_sum(weights * expected_cmat)) /
+    #   (1 - k_sum(weights * expected_cmat))
+
+    1 - k_sum(weights * cmat) / k_sum(weights * expected_cmat)
   }
 }
 

@@ -11,7 +11,6 @@ Discrete qwk
 }
 \examples{
 k_qwk <- k_ontram_qwk(ncol(Y))
-debugonce(k_qwk)
 k_qwk(k_constant(Y), m(list(INT, X, Z)))
 k_qwk(k_constant(Y), m$output)
 }
