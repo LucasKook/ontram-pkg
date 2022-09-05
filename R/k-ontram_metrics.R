@@ -4,7 +4,6 @@
 #' y_true <- k_constant(matrix(c(1, 0, 0, 0, 0), nrow = 1L))
 #' loss <- k_ontram_loss(ncol(y_true))
 #' loss(y_true, m$output)
-#' debugonce(loss)
 #' loss(k_constant(Y), m(list(INT, X, Z)))
 #' @export
 k_ontram_loss <- function(K) {
@@ -13,8 +12,8 @@ k_ontram_loss <- function(K) {
     shifts <- y_pred[, K, drop = TRUE]
     yu <- y_true[, 1L:(K - 1L), drop = FALSE]
     yl <- y_true[, 2L:K, drop = FALSE]
-    upr <- k_sum(tf$multiply(yu, intercepts), axis = 0L) - shifts
-    lwr <- k_sum(tf$multiply(yl, intercepts), axis = 0L) - shifts
+    upr <- k_sum(tf$multiply(yu, intercepts), axis = -1L) - shifts
+    lwr <- k_sum(tf$multiply(yl, intercepts), axis = -1L) - shifts
     t1 <- y_true[, 1L, drop = TRUE]
     tK <- y_true[, K, drop = TRUE]
     lik <- t1 * k_sigmoid(upr) + tK * (1 - k_sigmoid(lwr)) +
@@ -65,7 +64,7 @@ k_ontram_binll <- function(K, cutoff = 3L) {
     shifts <- y_pred[, K, drop = FALSE]
     cdf <- k_sigmoid(intercepts - shifts)
     pbin <- cdf[, cutoff, drop = TRUE]
-    ybin <- k_sum(y_true[, 1L:cutoff, drop = FALSE], axis = 0L)
+    ybin <- k_sum(y_true[, 1L:cutoff, drop = FALSE], axis = -1L)
     k_mean(k_binary_crossentropy(ybin, pbin))
   }
 }
@@ -88,7 +87,7 @@ k_ontram_auc <- function(K, cutoff = 3L) {
     shifts <- y_pred[, K, drop = FALSE]
     cdf <- k_sigmoid(intercepts - shifts)
     pbin <- cdf[, cutoff, drop = TRUE]
-    ybin <- k_sum(y_true[, 1L:cutoff, drop = FALSE], axis = 0L)
+    ybin <- k_sum(y_true[, 1L:cutoff, drop = FALSE], axis = -1L)
     k_AUC(ybin, pbin)
   }
 }
@@ -171,10 +170,10 @@ k_ontram_qwk <- function(K, p = 2L) {
     pK <- 1 - cdf[, K - 1L, drop = FALSE]
     pmf <- k_concatenate(list(p1, cdf[, 2L:(K - 1L), drop = FALSE] -
                                 cdf[, 1L:(K - 2L), drop = FALSE], pK))
-    pt <- k_argmax(pmf, axis = 0L)
+    pt <- k_argmax(pmf)
     yt <- k_argmax(y_true)
     cmat <- tf$cast(tf$math$confusion_matrix(yt, pt), dtype = "float32")
-    observed_margin <- k_sum(cmat, axis = 0L)
+    observed_margin <- k_sum(cmat, axis = -1L)
     predicted_margin <- k_sum(cmat, axis = 1L)
 
     expected_cmat <- tf$linalg$matmul(

@@ -13,6 +13,5 @@ Another keras implementation of the ontram loss
 y_true <- k_constant(matrix(c(1, 0, 0, 0, 0), nrow = 1L))
 loss <- k_ontram_loss(ncol(y_true))
 loss(y_true, m$output)
-debugonce(loss)
 loss(k_constant(Y), m(list(INT, X, Z)))
 }

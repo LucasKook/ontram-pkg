@@ -82,7 +82,7 @@ layer_trafo_intercept <- function() {
     function(x) {
       w1 <- x[, 1L, drop = FALSE]
       wrest <- tf$math$softplus(x[, 2L:x$shape[[2]], drop = FALSE])
-      tf$cumsum(k_concatenate(list(w1, wrest), axis = 0L), axis = 1L)
+      tf$cumsum(k_concatenate(list(w1, wrest), axis = -1L), axis = 1L)
     }
   )
 }

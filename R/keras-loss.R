@@ -8,7 +8,7 @@ gtt <- function(gammas) {
   thetaK <- k_constant(.Machine$double.xmax^0.1, shape = c(grows, 1L))
   ret <- k_concatenate(
     c(theta0, theta1, theta1 + tf$math$cumsum(thetas, axis = 1L), thetaK),
-    axis = 0L)
+    axis = -1L)
   return(ret)
 }
 
